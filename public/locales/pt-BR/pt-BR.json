@@ -1,0 +1,169 @@
+{
+  "appName": "Base Multiplataforma",
+  "tagline": "Next.js no centro. Mobile pronto nas bordas.",
+  "nav": {
+    "start": "Start",
+    "home": "Home",
+    "login": "Entrar",
+    "portal": "Area protegida",
+    "profile": "Profile"
+  },
+  "common": {
+    "locale": "Idioma",
+    "web": "Web-first",
+    "mobile": "Mobile-ready",
+    "platform": "Plataforma",
+    "signOut": "Sair",
+    "loading": "Carregando...",
+    "session": "Sessao"
+  },
+  "landing": {
+    "eyebrow": "Base unificada",
+    "title": "Template para projetos web e mobile sem misturar arquitetura.",
+    "description": "Esta base segue o guia do repositorio: Next.js organiza a aplicacao, Capacitor encapsula o nativo e a logica reaproveitavel do Expo entra como dominio compartilhado.",
+    "primaryCta": "Abrir start",
+    "secondaryCta": "Ir para home",
+    "portalCta": "Entrar no portal",
+    "localePrompt": "Escolha um idioma inicial"
+  },
+  "start": {
+    "badge": "Ponto de partida",
+    "title": "Uma fundacao pronta para crescer em web, Android e iOS.",
+    "description": "A estrutura usa src/app, rotas publicas e portal protegido, i18n inspirado na Base-Next e adaptadores moveis isolados para biometria, camera, arquivos e notificacoes.",
+    "transitionBadge": "Transicao",
+    "transitionTitle": "Preparando a experiencia inicial",
+    "transitionDescription": "Esta tela existe apenas para teste do fluxo de entrada e redireciona automaticamente para a home publica.",
+    "transitionCounterLabel": "Redirecionando para a home em",
+    "pillars": [
+      {
+        "title": "Estrutura Base-Next",
+        "body": "A organizacao segue a base web como padrao principal. O App Router dita paginas publicas, layout e portal protegido."
+      },
+      {
+        "title": "i18n no estilo Base-Next",
+        "body": "Os textos vivem em public/locales e a camada cliente usa i18next com detector e backend HTTP, como na referencia web."
+      },
+      {
+        "title": "Protecao adaptada do Expo",
+        "body": "O portal alterna a protecao conforme plataforma: web valida sessao; mobile pode exigir biometria antes de liberar a area protegida."
+      }
+    ]
+  },
+  "login": {
+    "title": "Entrar na area protegida",
+    "subtitle": "Fluxo inicial com validacao Zod, cookies para web e preferencia biometrica opcional no mobile.",
+    "email": "E-mail",
+    "password": "Senha",
+    "submit": "Entrar",
+    "helper": "Use qualquer e-mail valido e uma senha com pelo menos 6 caracteres.",
+    "error": "Nao foi possivel concluir o login.",
+    "biometricOptIn": "Ativar biometria no mobile quando disponivel",
+    "quickAccessTitle": "Acesso rapido de desenvolvimento",
+    "quickAccessAnalyst": "Entrar como analista",
+    "quickAccessManager": "Entrar como gestor"
+  },
+  "portal": {
+    "badge": "Area protegida",
+    "title": "Portal protegido com fluxo adaptado por plataforma.",
+    "subtitle": "No web, a sessao segue a logica baseada em cookies. No mobile, a sessao pode ser reforcada por biometria antes de liberar o portal.",
+    "sections": [
+      "Sessao persistida em storage e cookies para espelhar o comportamento web da Base-Next.",
+      "Preferencia biometrica por usuario inspirada na protecao da Base-Expo.",
+      "Portal isolado em /portal para separar claramente o publico do protegido."
+    ],
+    "mobileMessage": "Biometria ativa no mobile: ao entrar no portal, a identidade pode ser validada antes de liberar o conteudo.",
+    "webMessage": "Fluxo web: a navegacao protegida depende da sessao atual, sem prompt biometrico.",
+    "retry": "Tentar novamente",
+    "biometricTitle": "Biometria necessaria",
+    "biometricDescription": "Confirme sua identidade para continuar usando o portal no dispositivo.",
+    "checkingTitle": "Validando acesso",
+    "checkingDescription": "Aguarde a confirmacao no dispositivo.",
+    "enableBiometric": "Ativar biometria neste dispositivo",
+    "disableBiometric": "Desativar biometria neste dispositivo",
+    "biometricEnabled": "Biometria ativada para este login.",
+    "biometricDisabled": "Biometria desativada para este login."
+  },
+  "home": {
+    "badge": "Area publica",
+    "title": "Home publica da base unificada.",
+    "subtitle": "Esta rota agora funciona como showcase de componentes, mocks e padroes de layout para o produto web-first.",
+    "mobileBadge": "Acesso rapido",
+    "mobileTitle": "Entrada publica simplificada",
+    "mobileSubtitle": "No mobile sem sessao, a home publica fica reduzida para os fluxos principais e configuracoes rapidas.",
+    "publicDescription": "A home publica ficou propositalmente enxuta. Os exemplos e componentes de teste agora aparecem apenas dentro da home privada.",
+    "registerCta": "Cadastrar",
+    "quickConfigTitle": "Configuracoes rapidas",
+    "quickConfigSubtitle": "Idioma, tema e fonte acessiveis antes do login.",
+    "showcaseBadge": "Showcase UI",
+    "mockBadgeActive": "Mock ativo",
+    "mockBadgeInactive": "Mock pronto",
+    "tableTitle": "Fila operacional",
+    "tableSubtitle": "Exemplo de leitura unica: tabela no web e cards no telefone.",
+    "tableCaption": "Solicitacoes mockadas para validar a nova GenericTable.",
+    "formTitle": "Acoes e filtros",
+    "formSubtitle": "Area de teste para formularios compactos e botoes adaptaveis.",
+    "adaptiveAction": "Acao adaptavel",
+    "specialAction": "Acao especial",
+    "sections": [
+      "Start e Home permanecem publicos dentro da aplicacao.",
+      "Portal concentra apenas a experiencia autenticada e protegida.",
+      "O fluxo mobile pode adicionar biometria apenas quando o usuario entra na area privada."
+    ]
+  },
+  "developer": {
+    "title": "Modo desenvolvedor",
+    "description": "Ferramentas importadas do fluxo Expo e adaptadas para o shell web/mobile atual.",
+    "open": "Abrir modo desenvolvedor",
+    "close": "Fechar",
+    "reset": "Restaurar padrao",
+    "quickAccess": "Acesso rapido",
+    "quickAccessDescription": "Exibe botoes de login rapido e atalhos de teste nas telas de autenticacao.",
+    "formBlocks": "Bloqueios do formulario",
+    "formBlocksDescription": "Mantem o comportamento de bloquear etapas quando houver pendencias no fluxo.",
+    "zodValidation": "Validacao com Zod",
+    "zodValidationDescription": "Liga ou desliga o uso da validacao de schema no formulario de exemplo.",
+    "mockedData": "Modo mockado",
+    "mockedDataDescription": "Marca a interface como abastecida por dados locais para testes de layout e navegacao.",
+    "ignoreTls": "Ignorar TLS",
+    "ignoreTlsDescription": "Reserva o comportamento de ambiente inseguro para cenarios locais e homologacao.",
+    "webShell": "Shell web ativo: cabecalho classico, conteudo amplo e footer.",
+    "mobileShell": "Shell mobile ativo: top bar contextual, conteudo compacto e bottom bar de facil alcance."
+  },
+  "profile": {
+    "title": "Perfil e preferencias",
+    "subtitle": "Area unica para dados da conta e configuracoes do aplicativo em web e mobile.",
+    "accountTitle": "Dados do perfil",
+    "accountSubtitle": "Estrutura inspirada na pagina de perfil do Expo, adaptada para o fluxo web-first do projeto.",
+    "nameLabel": "Nome",
+    "emailLabel": "E-mail",
+    "loggedAtLabel": "Ultimo acesso",
+    "guestName": "Visitante",
+    "guestEmail": "Sem sessao ativa",
+    "configTitle": "Configuracoes",
+    "configSubtitle": "Idioma, fonte e tema ficam reunidos aqui no app mobile e na pagina de perfil do web.",
+    "portalAccessLabel": "Acesso protegido",
+    "mobileActionsTitle": "Acoes da conta",
+    "accessWeb": "Sessao web ativa",
+    "accessBiometricEnabled": "Biometria ativa neste dispositivo",
+    "accessBiometricDisabled": "Sessao mobile sem biometria",
+    "expandProfile": "Expandir",
+    "collapseProfile": "Recolher",
+    "languageTitle": "Idioma",
+    "themeTitle": "Tema",
+    "fontTitle": "Fonte",
+    "themeSystem": "Sistema",
+    "themeLight": "Claro",
+    "themeDark": "Escuro",
+    "fontSystem": "Padrao",
+    "fontReading": "Leitura",
+    "fontCompact": "Compacta",
+    "menuProfile": "Perfil",
+    "menuConfig": "Configuracoes",
+    "menuSignOut": "Sair"
+  },
+  "register": {
+    "title": "Cadastro publico",
+    "subtitle": "Pagina simples de cadastro para validar a navegacao publica no teste atual.",
+    "description": "Aqui pode entrar o fluxo real de cadastro depois. Por enquanto, a tela existe para suportar a home mobile reduzida com dois botoes principais."
+  }
+}

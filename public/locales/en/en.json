@@ -1,0 +1,169 @@
+{
+  "appName": "Multiplatform Base",
+  "tagline": "Next.js at the core. Mobile-ready at the edges.",
+  "nav": {
+    "start": "Start",
+    "home": "Home",
+    "login": "Sign in",
+    "portal": "Protected area",
+    "profile": "Profile"
+  },
+  "common": {
+    "locale": "Locale",
+    "web": "Web-first",
+    "mobile": "Mobile-ready",
+    "platform": "Platform",
+    "signOut": "Sign out",
+    "loading": "Loading...",
+    "session": "Session"
+  },
+  "landing": {
+    "eyebrow": "Unified base",
+    "title": "A template for web and mobile projects without collapsing both architectures together.",
+    "description": "This base follows the repository guide: Next.js owns the application structure, Capacitor wraps native behavior, and reusable Expo logic enters as shared domain code.",
+    "primaryCta": "Open start",
+    "secondaryCta": "Go to home",
+    "portalCta": "Open portal",
+    "localePrompt": "Choose an initial locale"
+  },
+  "start": {
+    "badge": "Starting point",
+    "title": "A foundation ready to grow across web, Android, and iOS.",
+    "description": "The structure uses src/app, public routes and a protected portal, Base-Next-inspired i18n, and isolated mobile adapters for biometrics, camera, files, and notifications.",
+    "transitionBadge": "Transition",
+    "transitionTitle": "Preparing the initial experience",
+    "transitionDescription": "This screen exists only to test the entry flow and redirects automatically to the public home page.",
+    "transitionCounterLabel": "Redirecting to home in",
+    "pillars": [
+      {
+        "title": "Base-Next structure",
+        "body": "The web base is the main reference. The App Router defines public pages, layout, and the protected portal."
+      },
+      {
+        "title": "Base-Next style i18n",
+        "body": "Translations live under public/locales and the client layer uses i18next with detector and HTTP backend, matching the web reference."
+      },
+      {
+        "title": "Expo protection adapted",
+        "body": "The portal changes behavior by platform: web validates session; mobile can require biometrics before unlocking the protected area."
+      }
+    ]
+  },
+  "login": {
+    "title": "Sign in to the protected area",
+    "subtitle": "Initial flow with Zod validation, cookies for web, and optional biometric preference on mobile.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "helper": "Use any valid email and a password with at least 6 characters.",
+    "error": "We could not complete the sign-in flow.",
+    "biometricOptIn": "Enable biometrics on mobile when available",
+    "quickAccessTitle": "Developer quick access",
+    "quickAccessAnalyst": "Sign in as analyst",
+    "quickAccessManager": "Sign in as manager"
+  },
+  "portal": {
+    "badge": "Protected area",
+    "title": "Protected portal with platform-specific flow.",
+    "subtitle": "On web, the session follows a cookie-based approach. On mobile, biometrics can be required before unlocking the portal.",
+    "sections": [
+      "Session persisted in storage and cookies to mirror the Base-Next web behavior.",
+      "Per-user biometric preference inspired by the Base-Expo protection flow.",
+      "Portal isolated under /portal to keep public and protected routes clearly separated."
+    ],
+    "mobileMessage": "Mobile biometric flow: identity can be validated before protected content is shown.",
+    "webMessage": "Web flow: protected navigation depends on the current session, without a biometric prompt.",
+    "retry": "Try again",
+    "biometricTitle": "Biometric authentication required",
+    "biometricDescription": "Confirm your identity to continue using the portal on this device.",
+    "checkingTitle": "Validating access",
+    "checkingDescription": "Please wait for confirmation on the device.",
+    "enableBiometric": "Enable biometrics on this device",
+    "disableBiometric": "Disable biometrics on this device",
+    "biometricEnabled": "Biometrics enabled for this login.",
+    "biometricDisabled": "Biometrics disabled for this login."
+  },
+  "home": {
+    "badge": "Public area",
+    "title": "Public home for the unified base.",
+    "subtitle": "This route now works as a showcase for components, mocks, and layout patterns for the web-first product.",
+    "mobileBadge": "Quick access",
+    "mobileTitle": "Simplified public entry",
+    "mobileSubtitle": "On mobile without a session, the public home is reduced to the main entry flows and quick settings.",
+    "publicDescription": "The public home is intentionally minimal. The examples and test components now appear only inside the private home.",
+    "registerCta": "Register",
+    "quickConfigTitle": "Quick settings",
+    "quickConfigSubtitle": "Language, theme and font available before sign-in.",
+    "showcaseBadge": "UI showcase",
+    "mockBadgeActive": "Mock enabled",
+    "mockBadgeInactive": "Mock ready",
+    "tableTitle": "Operational queue",
+    "tableSubtitle": "One data source: table on web and cards on phones.",
+    "tableCaption": "Mock requests to validate the new GenericTable.",
+    "formTitle": "Actions and filters",
+    "formSubtitle": "Compact form area for testing adaptive buttons and mobile ergonomics.",
+    "adaptiveAction": "Adaptive action",
+    "specialAction": "Special action",
+    "sections": [
+      "Start and Home remain public inside the application.",
+      "Portal contains only the authenticated and protected experience.",
+      "The mobile flow can add biometrics only when the user enters the private area."
+    ]
+  },
+  "developer": {
+    "title": "Developer mode",
+    "description": "Tools imported from the Expo flow and adapted to the current web/mobile shell.",
+    "open": "Open developer mode",
+    "close": "Close",
+    "reset": "Reset defaults",
+    "quickAccess": "Quick access",
+    "quickAccessDescription": "Shows quick sign-in buttons and test shortcuts on authentication screens.",
+    "formBlocks": "Form blocks",
+    "formBlocksDescription": "Keeps the behavior that blocks steps when the flow has validation issues.",
+    "zodValidation": "Zod validation",
+    "zodValidationDescription": "Turns schema validation on or off for the sample form flow.",
+    "mockedData": "Mock mode",
+    "mockedDataDescription": "Marks the interface as powered by local sample data for layout and navigation tests.",
+    "ignoreTls": "Ignore TLS",
+    "ignoreTlsDescription": "Keeps insecure-environment behavior reserved for local and staging scenarios.",
+    "webShell": "Web shell active: classic header, wide content and footer.",
+    "mobileShell": "Mobile shell active: contextual top bar, compact content and an easy-reach bottom bar."
+  },
+  "profile": {
+    "title": "Profile and preferences",
+    "subtitle": "Single area for account data and application settings on web and mobile.",
+    "accountTitle": "Profile details",
+    "accountSubtitle": "Structure inspired by the Expo profile page, adapted to the project's web-first flow.",
+    "nameLabel": "Name",
+    "emailLabel": "Email",
+    "loggedAtLabel": "Last access",
+    "guestName": "Guest",
+    "guestEmail": "No active session",
+    "configTitle": "Settings",
+    "configSubtitle": "Language, font and theme stay together here on mobile and inside the web profile page.",
+    "portalAccessLabel": "Protected access",
+    "mobileActionsTitle": "Account actions",
+    "accessWeb": "Web session active",
+    "accessBiometricEnabled": "Biometrics enabled on this device",
+    "accessBiometricDisabled": "Mobile session without biometrics",
+    "expandProfile": "Expand",
+    "collapseProfile": "Collapse",
+    "languageTitle": "Language",
+    "themeTitle": "Theme",
+    "fontTitle": "Font",
+    "themeSystem": "System",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "fontSystem": "Default",
+    "fontReading": "Reading",
+    "fontCompact": "Compact",
+    "menuProfile": "Profile",
+    "menuConfig": "Settings",
+    "menuSignOut": "Sign out"
+  },
+  "register": {
+    "title": "Public registration",
+    "subtitle": "Simple registration page to validate public navigation in the current test flow.",
+    "description": "The real registration flow can live here later. For now, this screen exists to support the reduced mobile home with two main buttons."
+  }
+}

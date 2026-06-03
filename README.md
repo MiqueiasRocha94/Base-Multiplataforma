@@ -1,36 +1,144 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Base Multiplataforma
 
-## Getting Started
+![Next.js](https://img.shields.io/badge/framework-next.js_16.2.6-000000)
+![React](https://img.shields.io/badge/ui-react_19.2.4-61DAFB)
+![Capacitor](https://img.shields.io/badge/mobile-capacitor_8.3.4-119EFF)
+![TypeScript](https://img.shields.io/badge/language-typescript_5-blue)
+![Zod](https://img.shields.io/badge/validation-zod_4.4.3-3E67B1)
+![Tailwind](https://img.shields.io/badge/style-tailwindcss_4-38BDF8)
+![i18next](https://img.shields.io/badge/i18n-i18next_26.3.0-26A69A)
 
-First, run the development server:
+Projeto base em `Next.js` com `Capacitor`, seguindo a estrutura e as convencoes do App Router do Next.js 16 e usando exportacao estatica para integracao mobile com `webDir: "out"`.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Diretriz
+
+Este projeto segue a estrutura do Next.js sem recriar navegacao de outros frameworks dentro de `src/app`.
+
+Regras adotadas:
+
+- `src/app/layout.tsx` e o root layout minimo, como a documentacao do Next.js recomenda
+- grupos de rota organizam a aplicacao sem alterar URL:
+  - `src/app/(Public)`
+  - `src/app/(Portal)`
+- pastas privadas dentro de `app` guardam implementacao nao roteavel:
+  - `_components`
+  - `_lib`
+- cada area define sua propria composicao com `layout.tsx`, `page.tsx` e arquivos colocados perto da rota
+- `next.config.ts` muda de comportamento por alvo de build
+- `capacitor.config.ts` usa `webDir: "out"` para consumir a saida do Next.js
+
+## Stack
+
+- Next.js `16.2.6`
+- React `19.2.4`
+- TypeScript `^5`
+- Tailwind CSS `^4`
+- Zod `^4.4.3`
+- Capacitor Core / CLI / Android / iOS `^8.3.4`
+- i18next `^26.3.0`
+
+Plugins nativos principais:
+
+- `@capacitor/camera` `^8.2.0`
+- `@capacitor/filesystem` `^8.1.2`
+- `@capacitor/local-notifications` `^8.2.0`
+- `@capacitor/push-notifications` `^8.1.1`
+- `@capawesome/capacitor-file-picker` `^8.0.2`
+- `@aparajita/capacitor-biometric-auth` `^10.0.0`
+
+## Estrutura
+
+```text
+src/
+  app/
+    page.tsx
+    (Public)/
+      layout.tsx
+      start/page.tsx
+      home/page.tsx
+      login/
+        page.tsx
+        _components/
+        _lib/
+    (Portal)/
+      portal/
+        layout.tsx
+        page.tsx
+        home/page.tsx
+        _components/
+  contexts/
+  lib/
+    auth/
+    i18n/
+    platform/
+  services/
+    api/
+  styles/
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Rotas
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `/`: bootstrap/start da aplicacao
+- `/start`: alias que redireciona para `/`
+- `/home`: home publica
+- `/login`: gateway de autenticacao
+- `/portal`: entrada da area protegida
+- `/portal/home`: home da area protegida
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Next.js + Capacitor
 
-## Learn More
+Padroes aplicados para o projeto funcionar como base Next.js com Capacitor:
 
-To learn more about Next.js, take a look at the following resources:
+- `npm run build` gera o build web normal do Next.js
+- `npm run build:mobile` gera a saida estatica para o alvo mobile
+- `next.config.ts` usa `NEXT_BUILD_TARGET` para decidir quando ativar `output: "export"`
+- `next/image` so usa `images.unoptimized` no build mobile
+- logicas de browser e storage ficam em Client Components ou em wrappers client-side
+- recursos nativos ficam encapsulados em `src/lib/platform`
+- a camada mobile consome o build web, sem duplicar estrutura de navegacao
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Requisitos
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Node.js 20+
+- npm 10+
 
-## Deploy on Vercel
+Para fluxo nativo:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Android Studio / Android SDK para Android
+- macOS + Xcode para build real de iOS
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Comandos
+
+```bash
+npm install
+npm run dev
+npm run lint
+npm run build
+npm run build:mobile
+```
+
+Fluxos Capacitor:
+
+```bash
+npm run cap:sync
+npm run cap:copy
+npm run mobile:build
+npm run mobile:android
+npm run mobile:ios
+```
+
+## Validacao
+
+Antes de concluir alteracoes:
+
+- validar `npm run lint`
+- validar `npm run build`
+- confirmar que novas rotas usam convencoes do App Router
+- confirmar que codigo especifico de rota fica colocado em `app/**/_components` ou `app/**/_lib` quando fizer sentido
+
+## Referencias do repositorio
+
+- [guia.md](C:/Users/Dev00/Desenvolvimento/HTML/multplataforma-base/guia.md)
+- `node_modules/next/dist/docs/`
+- `references/base-next/`
+- `references/base-expo/`
