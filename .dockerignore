@@ -1,0 +1,26 @@
+# Contexto de build das imagens Docker (web.Dockerfile usa context: .).
+# NAO ignora .env* — o build web precisa deles para embutir NEXT_PUBLIC_* .
+
+# Dependencias e saidas de build (recriadas dentro do container).
+node_modules
+.next
+out
+builds
+
+# Plataformas nativas (o build web nao usa; a imagem de APK gera a sua).
+android
+ios
+
+# Git e material de referencia.
+.git
+.gitignore
+references
+
+# Editor / SO / logs.
+.idea
+.vscode
+.DS_Store
+*.log
+
+# Segredos de assinatura Android (irrelevantes p/ web).
+.secrets
