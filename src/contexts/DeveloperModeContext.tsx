@@ -27,8 +27,14 @@ const DEFAULT_DEVELOPER_MODE_SETTINGS: DeveloperModeSettings = {
   ignoreTlsEnabled: false,
 };
 
+// So habilita no ambiente de desenvolvimento explicito. Isso fecha o buraco de
+// um `next build` cru (sem APP_ENV) herdar as flags de dev do .env base e ligar
+// comportamentos sensiveis (dados mockados, ignorar TLS, etc.) em producao.
+const isDevEnv = process.env.NEXT_PUBLIC_APP_ENV === "development";
 const developerModeEnabled =
-  String(process.env.NEXT_PUBLIC_DEVELOPER_MODE ?? "").trim().toLowerCase() === "true" || process.env.NODE_ENV !== "production";
+  isDevEnv &&
+  (String(process.env.NEXT_PUBLIC_DEVELOPER_MODE ?? "").trim().toLowerCase() === "true" ||
+    process.env.NODE_ENV !== "production");
 
 const DeveloperModeContext = createContext<DeveloperModeContextValue | null>(null);
 

@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "theme": "system",
+  "radiusPreset": "default",
+  "fontPreset": "system",
+  "fontScale": 1,
+  "layout": {
+    "headerVisible": true,
+    "leftSidebarVisible": true,
+    "rightSidebarVisible": true,
+    "footerVisible": true,
+    "headerReserveSpace": false,
+    "leftSidebarReserveSpace": false,
+    "rightSidebarReserveSpace": false,
+    "footerReserveSpace": false,
+    "headerHeight": 64,
+    "footerHeight": 48,
+    "leftSidebarWidth": 280,
+    "rightSidebarWidth": 280,
+    "leftSidebarDisplayMode": "full",
+    "rightSidebarDisplayMode": "full",
+    "leftSidebarLayoutMode": "structural",
+    "rightSidebarLayoutMode": "structural",
+    "sidebarCardMargin": 10,
+    "mainContentMode": "full",
+    "mainContentCardMargin": 10,
+    "zIndexHeader": 1000,
+    "zIndexFooter": 1000
+  },
+  "colorScheme": {
+    "activeSchemeId": "scheme-mr58y4tg",
+    "schemes": [
+      {
+        "id": "scheme-mr58y4tg",
+        "name": "Novo esquema",
+        "builtin": false,
+        "light": {
+          "primary": "#9e0b00",
+          "secondary": "#0a0a0a",
+          "tertiary": "#f5b400"
+        }
+      }
+    ],
+    "areas": {
+      "header": {
+        "custom": false,
+        "colors": {
+          "background": "#fffdf8",
+          "foreground": "#1f2933",
+          "border": "#d8d1c2"
+        }
+      },
+      "footer": {
+        "custom": false,
+        "colors": {
+          "background": "#fffdf8",
+          "foreground": "#52606d",
+          "border": "#d8d1c2"
+        }
+      },
+      "leftSidebar": {
+        "custom": true,
+        "colors": {
+          "background": "#000000",
+          "foreground": "#ffffff",
+          "border": "#f0a400"
+        }
+      },
+      "rightSidebar": {
+        "custom": false,
+        "colors": {
+          "background": "#fffdf8",
+          "foreground": "#1f2933",
+          "border": "#d8d1c2"
+        }
+      }
+    },
+    "charts": {
+      "custom": true,
+      "colors": {
+        "chart1": "#9e0000",
+        "chart2": "#ffdf00",
+        "chart3": "#002776",
+        "chart4": "#661400",
+        "chart5": "#c77400"
+      }
+    }
+  }
+}

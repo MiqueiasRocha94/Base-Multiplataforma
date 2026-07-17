@@ -3,10 +3,17 @@ const storagePrefix = "@multiplataforma-base";
 export const storageKeys = {
   locale: `${storagePrefix}/locale`,
   session: `${storagePrefix}/session`,
+  sessionUser: `${storagePrefix}/session_user`,
   biometricPreferenceByLogin: `${storagePrefix}/biometric_preference`,
   developerModeSettings: `${storagePrefix}/developer_mode_settings`,
   theme: `${storagePrefix}/theme`,
+  themeColors: `${storagePrefix}/theme_colors`,
+  colorScheme: `${storagePrefix}/color_scheme`,
   fontPreset: `${storagePrefix}/font_preset`,
+  fontScale: `${storagePrefix}/font_scale`,
+  radiusPreset: `${storagePrefix}/radius_preset`,
+  pushDeviceToken: `${storagePrefix}/push_device_token`,
+  deviceNotifications: `${storagePrefix}/device_notifications`,
 } as const;
 
 export function getStorageItem(key: string) {
