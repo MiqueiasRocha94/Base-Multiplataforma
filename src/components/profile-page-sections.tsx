@@ -1,14 +1,24 @@
 "use client";
 
-import { LocaleSwitcher } from "@/components/LocaleSwitcher";
-import { ThemeToggleButton } from "@/components/ThemeToggleButton";
+import { LocaleSwitcher } from "@/components/locale-switcher";
+import { ThemeToggleButton } from "@/components/theme-toggle-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { type AppDictionary } from "@/lib/i18n/dictionaries";
 import { languageLabels, type AppLocale } from "@/lib/i18n/settings";
 import { fontPresets, themeOptions } from "@/lib/preferences/options";
 import { cn } from "@/lib/utils";
-import type { AppTheme, FontPreset } from "@/contexts/ThemeProvider";
+import {
+  FONT_SCALE_DEFAULT,
+  FONT_SCALE_MAX,
+  FONT_SCALE_MIN,
+  FONT_SCALE_STEP,
+  derivePrimaryStrong,
+  resolveBrand,
+  useTheme,
+  type AppTheme,
+  type FontPreset,
+} from "@/contexts/ThemeProvider";
 
 type ProfileHeaderProps = {
   email: string | null;
@@ -33,13 +43,15 @@ type ProfileActionsSectionProps = {
   configExpanded: boolean;
   dictionary: AppDictionary;
   fontPreset: FontPreset;
+  onSetFontPreset: (preset: FontPreset) => void;
+  onToggleExpanded: () => void;
+};
+
+type ProfileAccountActionsSectionProps = {
+  dictionary: AppDictionary;
   mobileShell: boolean;
   onLogout: () => void;
-  onSetFontPreset: (preset: FontPreset) => void;
-  onSetTheme: (theme: AppTheme) => void;
-  onToggleExpanded: () => void;
   sessionActive: boolean;
-  theme: AppTheme;
 };
 
 function getInitials(value: string) {
@@ -179,14 +191,13 @@ export function ProfileActionsSection({
   configExpanded,
   dictionary,
   fontPreset,
-  mobileShell,
-  onLogout,
   onSetFontPreset,
-  onSetTheme,
   onToggleExpanded,
-  sessionActive,
-  theme,
 }: ProfileActionsSectionProps) {
+  // No Perfil o usuario apenas SELECIONA um esquema predefinido. A edicao
+  // (criar/editar/excluir) vive no painel do sistema.
+  const { schemes, activeScheme, setActiveScheme, resolvedTheme, fontScale, setFontScale } = useTheme();
+
   return (
     <Card id="config">
       <CardHeader className="gap-4 border-b border-border/60">
@@ -221,27 +232,6 @@ export function ProfileActionsSection({
             </div>
           </div>
 
-          {sessionActive && mobileShell ? (
-            <div className="rounded-[var(--radius-xl)] border border-border bg-[color:var(--color-surface-strong)] p-4">
-              <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-text-muted">
-                {dictionary.profile.mobileActionsTitle}
-              </p>
-              <Button fixed={false} variant="danger" onClick={onLogout}>
-                {dictionary.profile.menuSignOut}
-              </Button>
-            </div>
-          ) : null}
-
-          <OptionGroup
-            activeValue={theme}
-            label={dictionary.profile.themeTitle}
-            onChange={onSetTheme}
-            options={themeOptions.map((option) => ({
-              value: option.value,
-              label: dictionary.profile[option.labelKey],
-            }))}
-          />
-
           <OptionGroup
             activeValue={fontPreset}
             label={dictionary.profile.fontTitle}
@@ -252,15 +242,92 @@ export function ProfileActionsSection({
             }))}
           />
 
-          {sessionActive && !mobileShell ? (
-            <div className="border-t border-border/60 pt-4">
-              <Button variant="danger" onClick={onLogout}>
-                {dictionary.profile.menuSignOut}
+          <div className="grid gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-text-muted">{dictionary.profile.fontSizeTitle}</p>
+              <span className="text-sm font-semibold tabular-nums text-text">{Math.round(fontScale * 100)}%</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-text-muted" aria-hidden="true">A</span>
+              <input
+                type="range"
+                min={FONT_SCALE_MIN}
+                max={FONT_SCALE_MAX}
+                step={FONT_SCALE_STEP}
+                value={fontScale}
+                onChange={(event) => setFontScale(Number.parseFloat(event.target.value))}
+                aria-label={dictionary.profile.fontSizeTitle}
+                className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-[color:var(--color-surface-strong)] accent-primary"
+              />
+              <span className="text-2xl leading-none text-text-muted" aria-hidden="true">A</span>
+            </div>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setFontScale(FONT_SCALE_DEFAULT)}>
+                {dictionary.profile.fontSizeReset}
               </Button>
             </div>
-          ) : null}
+          </div>
+
+          <div className="grid gap-3">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-text-muted">{dictionary.profile.colorSchemeTitle}</p>
+            <div className="flex flex-wrap items-center gap-3">
+              {schemes.map((scheme) => {
+                const brand = resolveBrand(scheme, resolvedTheme);
+                const active = activeScheme.id === scheme.id;
+                const quadrants = [brand.primary, derivePrimaryStrong(brand.primary), brand.secondary, brand.tertiary];
+
+                return (
+                  <button
+                    key={scheme.id}
+                    type="button"
+                    onClick={() => setActiveScheme(scheme.id)}
+                    title={scheme.name}
+                    aria-label={scheme.name}
+                    aria-pressed={active}
+                    className={cn(
+                      "size-16 overflow-hidden rounded-xl border-2 transition",
+                      active ? "border-primary ring-2 ring-primary/40" : "border-border hover:border-primary/60",
+                    )}
+                  >
+                    <span className="grid h-full w-full grid-cols-2 grid-rows-2">
+                      {quadrants.map((color, index) => (
+                        <span key={index} style={{ backgroundColor: color }} />
+                      ))}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </CardContent>
       ) : null}
+    </Card>
+  );
+}
+
+export function ProfileAccountActionsSection({
+  dictionary,
+  mobileShell,
+  onLogout,
+  sessionActive,
+}: ProfileAccountActionsSectionProps) {
+  if (!sessionActive) {
+    return null;
+  }
+
+  return (
+    <Card>
+      <CardHeader className="gap-2 border-b border-border/60">
+        <CardTitle className="text-xl">{dictionary.profile.mobileActionsTitle}</CardTitle>
+        <p className="text-sm leading-6 text-text-muted">
+          {mobileShell ? dictionary.profile.subtitle : dictionary.profile.accountSubtitle}
+        </p>
+      </CardHeader>
+      <CardContent className="pt-6">
+        <Button className={mobileShell === true ? "w-full" : undefined} variant="danger" onClick={onLogout}>
+          {dictionary.profile.menuSignOut}
+        </Button>
+      </CardContent>
     </Card>
   );
 }

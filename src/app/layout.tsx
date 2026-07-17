@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 
 import "@/app/globals.css";
-import AppLayout from "@/components/AppLayout";
+import { TooltipProvider } from "@/components/tooltip";
+import AppStructure from "@/components/layout/app-structure";
 
 export const metadata: Metadata = {
   title: "Base Multiplataforma",
@@ -12,7 +13,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="pt-BR">
       <body>
-        <AppLayout>{children}</AppLayout>
+        <TooltipProvider>
+          <AppStructure>{children}</AppStructure>
+        </TooltipProvider>
       </body>
     </html>
   );

@@ -10,32 +10,33 @@ const TRANSITION_SECONDS = 3;
 
 export default function Page() {
   const router = useRouter();
-  const { shellMode } = useDevice();
+  const { view } = useDevice();
   const { dictionary } = useLanguage();
   const [secondsLeft, setSecondsLeft] = useState(TRANSITION_SECONDS);
 
   useEffect(() => {
-    if (shellMode === "web") {
+    if (view !== "mobile") {
       router.replace("/home");
       return;
     }
 
     const intervalId = window.setInterval(() => {
-      setSecondsLeft((currentSeconds) => {
-        if (currentSeconds <= 1) {
-          window.clearInterval(intervalId);
-          router.replace("/home");
-          return 0;
-        }
-
-        return currentSeconds - 1;
-      });
+      setSecondsLeft((currentSeconds) => Math.max(currentSeconds - 1, 0));
     }, 1000);
 
     return () => window.clearInterval(intervalId);
-  }, [router, shellMode]);
+  }, [router, view]);
 
-  if (shellMode === "web") {
+  // Navegacao fora do updater do setState: updaters rodam durante o render e
+  // efeitos colaterais neles (router.replace) deixam a transicao do App Router
+  // pendente para sempre (tela presa em "Rendering...").
+  useEffect(() => {
+    if (view === "mobile" && secondsLeft <= 0) {
+      router.replace("/home");
+    }
+  }, [secondsLeft, view, router]);
+
+  if (view !== "mobile") {
     return null;
   }
 

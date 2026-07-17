@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
+  ProfileAccountActionsSection,
   ProfileActionsSection,
   ProfileDetailsCard,
   ProfileHeader,
@@ -24,14 +25,57 @@ function resolveAccessLabel(isNative: boolean, biometricEnabled: boolean, dictio
 export default function ProfilePage() {
   const router = useRouter();
   const { dictionary, locale } = useLanguage();
-  const { theme, setTheme, fontPreset, setFontPreset } = useTheme();
+  const { theme, fontPreset, setFontPreset } = useTheme();
   const { biometricEnabled, session, signOut } = useAuth();
-  const { isNative, shellMode } = useDevice();
+  const { isNative, view } = useDevice();
   const [expanded, setExpanded] = useState(false);
   const [configExpanded, setConfigExpanded] = useState(false);
 
   const profileName = session?.username ?? dictionary.profile.guestName;
   const accessLabel = resolveAccessLabel(isNative, biometricEnabled, dictionary);
+
+  if (view === "mobile") {
+    return (
+      <section className="grid gap-3 px-4 py-4">
+        <ProfileHeader
+          name={profileName}
+          email={session?.email ?? dictionary.profile.guestEmail}
+          subtitle={dictionary.profile.subtitle}
+        />
+
+        <ProfileDetailsCard
+          dictionary={dictionary}
+          email={session?.email ?? dictionary.profile.guestEmail}
+          expanded
+          fontPreset={fontPreset}
+          locale={locale}
+          loggedAt={session?.loggedAt ?? null}
+          name={profileName}
+          onToggleExpanded={() => setExpanded((current) => !current)}
+          theme={theme}
+          accessLabel={accessLabel}
+        />
+
+        <ProfileActionsSection
+          configExpanded
+          dictionary={dictionary}
+          fontPreset={fontPreset}
+          onSetFontPreset={setFontPreset}
+          onToggleExpanded={() => setConfigExpanded((current) => !current)}
+        />
+
+        <ProfileAccountActionsSection
+          dictionary={dictionary}
+          mobileShell
+          onLogout={() => {
+            signOut();
+            router.replace("/home");
+          }}
+          sessionActive={Boolean(session)}
+        />
+      </section>
+    );
+  }
 
   return (
     <section className="mx-auto grid w-full max-w-4xl gap-6 py-8">
@@ -58,16 +102,18 @@ export default function ProfilePage() {
         configExpanded={configExpanded}
         dictionary={dictionary}
         fontPreset={fontPreset}
-        mobileShell={shellMode === "mobile"}
-        onLogout={() => {
-          signOut();
+        onSetFontPreset={setFontPreset}
+        onToggleExpanded={() => setConfigExpanded((current) => !current)}
+      />
+
+        <ProfileAccountActionsSection
+          dictionary={dictionary}
+          mobileShell={false}
+          onLogout={() => {
+            signOut();
           router.replace("/home");
         }}
-        onSetFontPreset={setFontPreset}
-        onSetTheme={setTheme}
-        onToggleExpanded={() => setConfigExpanded((current) => !current)}
         sessionActive={Boolean(session)}
-        theme={theme}
       />
     </section>
   );
