@@ -1,4 +1,6 @@
 import { getStorageItem, removeStorageItem, setStorageItem, storageKeys } from "@/lib/platform/storage";
+import { resolveAuthUser } from "@/lib/auth/demo-users";
+import type { User } from "@/types/user";
 
 export type DemoSession = {
   email: string;
@@ -68,7 +70,29 @@ export async function signIn(email: string, biometricOptIn = false): Promise<Dem
   setStorageItem(storageKeys.session, JSON.stringify(session));
   persistSessionCookies(session);
   setBiometricPreference(email, biometricOptIn);
+
+  // Resolve e persiste a identidade completa (`/auth/me` mockado). No backend
+  // real, o `User` (com roles/permissions) vem da resposta do login.
+  const user = resolveAuthUser(email);
+  setStorageItem(storageKeys.sessionUser, JSON.stringify(user));
+
   return session;
+}
+
+/** Identidade autenticada persistida (fonte de verdade da autorizacao na UI). */
+export function getSessionUser(): User | null {
+  const serialized = getStorageItem(storageKeys.sessionUser);
+
+  if (!serialized) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(serialized) as User;
+  } catch {
+    removeStorageItem(storageKeys.sessionUser);
+    return null;
+  }
 }
 
 export function getSession(): DemoSession | null {
@@ -118,6 +142,7 @@ export function getBiometricPreference(login: string) {
 
 export function clearSession() {
   removeStorageItem(storageKeys.session);
+  removeStorageItem(storageKeys.sessionUser);
   clearSessionCookies();
 }
 
