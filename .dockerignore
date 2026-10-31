@@ -1,20 +1,32 @@
-# Contexto de build das imagens Docker (web.Dockerfile usa context: .).
-# NAO ignora .env* — o build web precisa deles para embutir NEXT_PUBLIC_* .
+# Contexto de build das imagens Docker. Todos os composes em docker/<env>/...
+# usam a raiz do projeto como contexto (context: ../.. relativo ao compose).
+# Leva .env.homolog/.env.production — o build web precisa deles para embutir NEXT_PUBLIC_* .
 
 # Dependencias e saidas de build (recriadas dentro do container).
 node_modules
 .next
 out
 builds
+dist
+# Exceto o pacote da atualização remota gerado no host (publicado pela imagem web).
+!dist/app-updates
+.dist-build
+.dist-build-dev
+
+# Certificado local do dev:https e area dos agentes/docs (nao entram no build).
+certificates
+.agents
+.claude
+docs
+tests
 
 # Plataformas nativas (o build web nao usa; a imagem de APK gera a sua).
 android
 ios
 
-# Git e material de referencia.
+# Git.
 .git
 .gitignore
-references
 
 # Editor / SO / logs.
 .idea
@@ -24,3 +36,9 @@ references
 
 # Segredos de assinatura Android (irrelevantes p/ web).
 .secrets
+
+# Ambiente de desenvolvimento (flags de dev e credenciais do acesso rapido): nunca no contexto da imagem.
+/.env
+.env*.local
+# Modelos versionados (.env.example, .env.<ambiente>.example).
+.env*.example

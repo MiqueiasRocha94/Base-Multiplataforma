@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -60,16 +61,61 @@ export function normalizeAppEnv(input, fallback = "development") {
   return fallback;
 }
 
+/**
+ * Um arquivo por ambiente, sem herança: `.env` é só o de desenvolvimento. Os
+ * modelos versionados são `.env.example` e `.env.<ambiente>.example`.
+ */
 export function getAppEnvFiles(appEnv) {
   switch (appEnv) {
     case "homolog":
-      return [".env", ".env.homolog"];
+      return [".env.homolog"];
     case "production":
-      return [".env", ".env.production"];
+      return [".env.production"];
     case "development":
     default:
       return [".env"];
   }
+}
+
+/** IPv4 da máquina na rede (sem loopback). */
+export function lanAddresses() {
+  return Object.values(os.networkInterfaces())
+    .flat()
+    .filter((iface) => iface && iface.family === "IPv4" && !iface.internal)
+    .map((iface) => iface.address);
+}
+
+// Redes domésticas/escritório antes de VPN e das redes virtuais (Docker, WSL, Hyper-V).
+const LAN_PREFERENCE = [/^192\.168\./, /^10\./, /^172\.(1[6-9]|2\d|3[01])\./];
+
+/** IP pelo qual o celular/APK alcança esta máquina; `DEV_HOST_IP` força um valor. */
+export function resolveDevHostIp(env = process.env, addresses = lanAddresses()) {
+  const forced = (env.DEV_HOST_IP ?? "").trim();
+  if (forced) return forced;
+  for (const pattern of LAN_PREFERENCE) {
+    const match = addresses.find((address) => pattern.test(address));
+    if (match) return match;
+  }
+  return addresses[0] ?? null;
+}
+
+const LOCAL_URL = /^(https?:\/\/)(localhost|127\.0\.0\.1)(?=[:/]|$)/i;
+
+/**
+ * Desenvolvimento: troca `localhost`/`127.0.0.1` das URLs `NEXT_PUBLIC_*` pelo IP
+ * da rede (mantém porta e caminho), para o APK debug e o celular alcançarem a API
+ * sem editar o `.env`. Devolve o IP usado, ou `null` se nada mudou.
+ */
+export function applyLanHostToLocalUrls(env = process.env, hostIp = resolveDevHostIp(env)) {
+  if (!hostIp) return null;
+  let replaced = false;
+  for (const [key, value] of Object.entries(env)) {
+    if (key.startsWith("NEXT_PUBLIC_") && typeof value === "string" && LOCAL_URL.test(value.trim())) {
+      env[key] = value.trim().replace(LOCAL_URL, `$1${hostIp}`);
+      replaced = true;
+    }
+  }
+  return replaced ? hostIp : null;
 }
 
 export function loadAppEnv(appEnv) {
@@ -99,6 +145,11 @@ export function loadAppEnv(appEnv) {
 
   process.env.APP_ENV = resolvedAppEnv;
   process.env.NEXT_PUBLIC_APP_ENV = resolvedAppEnv;
+
+  if (resolvedAppEnv === "development") {
+    const hostIp = applyLanHostToLocalUrls(process.env);
+    if (hostIp) console.log(`[env] desenvolvimento: localhost → ${hostIp} (IP da rede; DEV_HOST_IP força outro)`);
+  }
 
   return {
     appEnv: resolvedAppEnv,

@@ -1,0 +1,26 @@
+# Homologação · WEB.
+# Build da app web para HOMOLOG reproduzindo o processo de produção, SEM
+# ferramentas de desenvolvimento (nada de hot reload / dev server): mesma imagem
+# auto-contida (next build standalone) servida por um server Node mínimo.
+# Ciclo independente do App — ver ../app/.
+#
+#   docker compose -f docker/homolog/web/docker-compose.yml build web
+#   docker compose -f docker/homolog/web/docker-compose.yml up --build web
+#     (atalhos: npm run docker:homolog:web[:image|:down])
+#
+# WEB_PORT: porta publicada no host (default 3000).
+name: mpb-homolog-web
+
+services:
+  web:
+    build:
+      # Contexto = raiz do projeto (3 níveis acima deste compose).
+      context: ../../..
+      dockerfile: docker/web.Dockerfile
+      args:
+        APP_ENV: homolog
+    image: multiplataforma-web:homolog
+    environment:
+      PORT: 3000
+    ports:
+      - "${WEB_PORT:-3000}:3000"

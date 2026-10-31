@@ -1,0 +1,41 @@
+# Homologação · APP (Capacitor / APK Android).
+# Gera o APK release de HOMOLOG reproduzindo o processo de build de produção,
+# SEM ferramentas de desenvolvimento. Ciclo independente da Web — ver ../web/.
+#
+#   docker compose -f docker/homolog/app/docker-compose.yml build app
+#   docker compose -f docker/homolog/app/docker-compose.yml run --rm app
+#     (atalhos: npm run docker:homolog:app[:image])
+#
+# APP_ENV=homolog → docker-apk.mjs roda `npm run apk` (release homolog). O APK
+# nomeado sai em builds/apk/ no host.
+name: mpb-homolog-app
+
+services:
+  app:
+    build:
+      # Contexto = raiz do projeto (3 níveis acima deste compose).
+      context: ../../..
+      dockerfile: docker/android.Dockerfile
+    image: capacitor-android-toolchain:latest
+    working_dir: /workspace
+    environment:
+      APP_ENV: homolog
+      # Atualização remota do app (opcional; docs/ambiente-e-build.md → "Atualização remota do app"):
+      # desligada por padrão. Ligar: APP_UPDATE_ENABLED=true e a URL do manifest.json do canal no host.
+      APP_UPDATE_ENABLED: ${APP_UPDATE_ENABLED:-false}
+      NEXT_PUBLIC_APP_UPDATE_URL: ${NEXT_PUBLIC_APP_UPDATE_URL:-}
+    command: ["node", "scripts/docker-apk.mjs"]
+    volumes:
+      # Bind mount da raiz do projeto (relativo a este compose).
+      - ../../..:/workspace
+      - node_modules:/workspace/node_modules
+      - gradle-cache:/root/.gradle
+
+volumes:
+  # Compartilhados entre TODOS os composes de App (deps e cache do Gradle sao
+  # iguais entre marcas/ambientes). Nome fixo => um unico par, sem prefixo do
+  # projeto, reaproveitado por todos os composes de App (homolog/develop).
+  node_modules:
+    name: mpb-node_modules
+  gradle-cache:
+    name: mpb-gradle-cache

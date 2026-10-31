@@ -10,6 +10,11 @@
 !.yarn/releases
 !.yarn/versions
 
+# pnpm só como gerenciador local (store compartilhado entre projetos); o
+# repositório segue o npm (package-lock.json)
+/pnpm-lock.yaml
+/pnpm-workspace.yaml
+
 # testing
 /coverage
 
@@ -27,6 +32,7 @@
 /android
 /ios
 /references
+/references/*
 
 # debug
 npm-debug.log*
@@ -36,6 +42,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+!.env.*.example
 
 # android signing: keystore + senhas — NUNCA commitar (exceto os *.example)
 /.secrets/*
@@ -48,3 +56,16 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .notfound-catchall.disabled/
+
+# Área de trabalho local dos agentes (estado, handoffs, planos) — não versionar
+/.agents/workspace/
+
+# certificado do npm run dev:https (scripts/dev-https-cert.mjs)
+/certificates/
+
+# entrada de build sem codigo de dev (scripts/prepare-dist-source.mjs) e artefatos montados
+/.dist-build/
+/.dist-build-dev/
+# artefatos da esteira emulada (docker/ci): APK e keystore temporario
+/builds/
+/dist/

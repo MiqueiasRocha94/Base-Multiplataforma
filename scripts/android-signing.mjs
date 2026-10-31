@@ -3,7 +3,9 @@
 //
 // Config por ambiente, resolvida nesta ordem:
 //   1) variaveis de ambiente (CI): ANDROID_KEYSTORE_FILE/_PASSWORD/_KEY_ALIAS/_KEY_PASSWORD
-//   2) arquivo .secrets/android-signing.<env>.env (gitignored)
+//   2) arquivo .secrets/android-signing.<env>.env (gitignored); em producao, um por
+//      marca: .secrets/android-signing.production.<marca>.env — cada marca e um app
+//      na loja e so atualiza assinado com a chave dele
 //   3) fallback: homolog GERA um keystore automatico; producao FALHA (exige o seu).
 import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
@@ -20,8 +22,9 @@ const REQUIRED_KEYS = [
   "ANDROID_KEY_PASSWORD",
 ];
 
-function signingEnvFile(appEnv) {
-  return path.join(SECRETS_DIR, `android-signing.${appEnv}.env`);
+function signingEnvFile(appEnv, brand) {
+  const scope = appEnv === "production" ? `${appEnv}.${brand}` : appEnv;
+  return path.join(SECRETS_DIR, `android-signing.${scope}.env`);
 }
 
 function parseEnvFile(file) {
@@ -63,8 +66,8 @@ function run(command, args) {
   }
 }
 
-function readConfig(appEnv) {
-  const fromFile = parseEnvFile(signingEnvFile(appEnv));
+function readConfig(appEnv, brand) {
+  const fromFile = parseEnvFile(signingEnvFile(appEnv, brand));
   const fromEnv = {};
   for (const key of REQUIRED_KEYS) {
     if (process.env[key]) {
@@ -121,9 +124,12 @@ function generateKeystore(appEnv) {
   return config;
 }
 
-/** Resolve a config de assinatura para o ambiente (gera para homolog; exige para producao). */
-export function resolveSigningConfig(appEnv) {
-  const existing = readConfig(appEnv);
+/**
+ * Resolve a config de assinatura para o ambiente (gera para homolog; exige para
+ * producao, com a chave da marca).
+ */
+export function resolveSigningConfig(appEnv, brand) {
+  const existing = readConfig(appEnv, brand);
   if (existing) {
     const keystore = resolveKeystorePath(existing.ANDROID_KEYSTORE_FILE);
     if (!fs.existsSync(keystore)) {
@@ -134,8 +140,9 @@ export function resolveSigningConfig(appEnv) {
 
   if (appEnv === "production") {
     throw new Error(
-      "[sign] Build de PRODUCAO exige um keystore proprio. Crie .secrets/android-signing.production.env " +
-        "(veja .secrets/android-signing.production.env.example) ou defina as variaveis ANDROID_KEYSTORE_FILE, " +
+      `[sign] Build de PRODUCAO exige o keystore do app publicado da marca "${brand}". Crie ` +
+        `.secrets/android-signing.production.${brand}.env (mesmas chaves de ` +
+        ".secrets/android-signing.production.env.example) ou defina as variaveis ANDROID_KEYSTORE_FILE, " +
         "ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS e ANDROID_KEY_PASSWORD. Producao nunca usa keystore auto-gerado.",
     );
   }

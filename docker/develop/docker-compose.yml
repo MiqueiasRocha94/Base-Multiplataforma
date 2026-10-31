@@ -1,0 +1,42 @@
+# Desenvolvimento · APP (Capacitor / APK Android) — SOMENTE o App.
+# Use apenas quando precisar rodar o App em ambiente Dockerizado durante o
+# desenvolvimento. A Web NÃO tem Docker em develop: rode direto no Node com
+# `npm run dev` (Turbopack / hot reload).
+#
+#   docker compose -f docker/develop/docker-compose.yml build app
+#   docker compose -f docker/develop/docker-compose.yml run --rm app
+#     (atalhos: npm run docker:develop:app[:image])
+#
+# APP_ENV=debug → docker-apk.mjs roda `npm run mobile:debug` (APK debug, com
+# painel do sistema + devtools). O APK sai em builds/apk/ no host.
+name: mpb-develop-app
+
+services:
+  app:
+    build:
+      # Contexto = raiz do projeto (2 níveis acima deste compose).
+      context: ../..
+      dockerfile: docker/android.Dockerfile
+    image: capacitor-android-toolchain:latest
+    working_dir: /workspace
+    environment:
+      APP_ENV: debug
+      # Atualização remota do app (opcional; docs/ambiente-e-build.md → "Atualização remota do app"):
+      # desligada por padrão. Ligar: APP_UPDATE_ENABLED=true e a URL do manifest.json do canal no host.
+      APP_UPDATE_ENABLED: ${APP_UPDATE_ENABLED:-false}
+      NEXT_PUBLIC_APP_UPDATE_URL: ${NEXT_PUBLIC_APP_UPDATE_URL:-}
+    command: ["node", "scripts/docker-apk.mjs"]
+    volumes:
+      # Bind mount da raiz do projeto (relativo a este compose).
+      - ../..:/workspace
+      - node_modules:/workspace/node_modules
+      - gradle-cache:/root/.gradle
+
+volumes:
+  # Compartilhados entre TODOS os composes de App (deps e cache do Gradle sao
+  # iguais entre marcas/ambientes). Nome fixo => um unico par, sem prefixo do
+  # projeto, reaproveitado por todos os composes de App (homolog/develop).
+  node_modules:
+    name: mpb-node_modules
+  gradle-cache:
+    name: mpb-gradle-cache

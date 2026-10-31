@@ -1,0 +1,7 @@
+{
+  "nativeVersion": "0.1.0",
+  "defaultBrand": "base",
+  "apps": {
+    "base": { "appId": "com.multiplataforma.base", "name": "Base Multiplataforma" }
+  }
+}
