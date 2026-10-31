@@ -1,0 +1,13 @@
+---
+description: Documentação e orientação de agentes (docs/ e .agents/)
+applyTo: "docs/**,.agents/**"
+---
+
+<!-- GERADO por npm run agents:sync a partir de docs/ e .agents/rules/ — não edite. -->
+
+# Documentação e orientação de agentes
+
+Ao mexer nestes caminhos, leia em `docs/`:
+
+- `docs/conduta-agentes.md` → "Documentação e commits", "Especificação de mudança" e "Critério de documentação"
+- `docs/README.md` → "Índice" e "Por assunto"
