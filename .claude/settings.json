@@ -1,0 +1,55 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/agent-guard.mjs",
+            "timeout": 90
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "Bash(git reset --hard*)",
+      "Bash(git checkout -- *)",
+      "Bash(git checkout .)",
+      "Bash(git restore *)",
+      "Bash(git clean *)",
+      "Bash(git stash*)",
+      "Bash(rm -rf *)",
+      "PowerShell(git reset --hard*)",
+      "PowerShell(git checkout -- *)",
+      "PowerShell(git checkout .)",
+      "PowerShell(git restore *)",
+      "PowerShell(git clean *)",
+      "PowerShell(git stash*)",
+      "PowerShell(Remove-Item * -Recurse*)",
+      "PowerShell(rm -r*)",
+      "Read(./.secrets/**)",
+      "Read(./.env.production)",
+      "Read(./.env.homolog)",
+      "Read(./.env-homologacao)"
+    ],
+    "ask": [
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(git tag*)",
+      "Bash(npm install*)",
+      "Bash(npm i *)",
+      "Bash(npm uninstall*)",
+      "Bash(npm run release*)",
+      "PowerShell(git commit*)",
+      "PowerShell(git push*)",
+      "PowerShell(git tag*)",
+      "PowerShell(npm install*)",
+      "PowerShell(npm i *)",
+      "PowerShell(npm uninstall*)",
+      "PowerShell(npm run release*)"
+    ]
+  }
+}

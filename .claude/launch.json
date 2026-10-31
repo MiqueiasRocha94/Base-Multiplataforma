@@ -4,9 +4,78 @@
     {
       "name": "dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "dev-rede",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "env": {
+        "PORT": "80"
+      },
+      "port": 80,
+      "autoPort": false
+    },
+    {
+      "name": "dev-backend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "env": {
+        "NEXT_PUBLIC_ACESSO_API_URL": ""
+      },
+      "port": 3000,
+      "autoPort": true
+    },
+    {
+      "name": "dev-https",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:https"
+      ],
+      "env": {
+        "PORT": "3443"
+      },
+      "port": 3443,
+      "url": "https://localhost:3443"
+    },
+    {
+      "name": "homolog",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "./scripts/serve-dist.mjs",
+        "--env=homolog"
+      ],
+      "env": {
+        "PORT": "3100"
+      },
+      "port": 3100
+    },
+    {
+      "name": "mock-build",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "./scripts/run-next-with-env.mjs",
+        "start",
+        "--env=development",
+        "-p",
+        "3200"
+      ],
+      "env": {
+        "NEXT_PUBLIC_ACESSO_API_URL": ""
+      },
+      "port": 3200
     }
   ]
 }
