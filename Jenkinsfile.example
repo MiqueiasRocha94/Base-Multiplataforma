@@ -1,0 +1,76 @@
+// Esteira no Jenkins (docs/ambiente-e-build.md → "Esteira (CI)").
+// Modelo: para ativar, copie para Jenkinsfile. Roda o mesmo compose da esteira
+// emulada (docker/ci), então o resultado é o do `npm run docker:ci` local. Precisa de
+// um agente com Docker e Compose.
+//
+// Parâmetros: CI_APP_ENV, CI_ENV_FILE e CI_STAGES (abaixo). Assinatura do APK pelas
+// credenciais `android-keystore` (arquivo) e `android-keystore-signing` (usuário = alias,
+// senha = senha do keystore e da chave); homolog gera keystore automático se faltarem.
+pipeline {
+  agent any
+
+  options {
+    timeout(time: 60, unit: 'MINUTES')
+    disableConcurrentBuilds()
+  }
+
+  parameters {
+    choice(name: 'CI_APP_ENV', choices: ['homolog', 'production'], description: 'Ambiente do build')
+    string(name: 'CI_ENV_FILE', defaultValue: '', description: 'Arquivo de ambiente (padrão .env.<ambiente>.example)')
+    string(name: 'CI_STAGES', defaultValue: '', description: 'Etapas separadas por vírgula (padrão: todas)')
+  }
+
+  environment {
+    CI_APP_ENV = "${params.CI_APP_ENV}"
+    CI_ENV_FILE = "${params.CI_ENV_FILE}"
+    CI_STAGES = "${params.CI_STAGES}"
+  }
+
+  stages {
+    stage('Skip CI') {
+      steps {
+        script {
+          def message = sh(script: 'git log -1 --pretty=%B', returnStdout: true)
+          if (message.contains('[skip ci]')) {
+            currentBuild.result = 'NOT_BUILT'
+            error('Commit com [skip ci].')
+          }
+        }
+      }
+    }
+
+    stage('Esteira') {
+      steps {
+        sh 'docker compose -f docker/ci/docker-compose.yml build pipeline'
+        script {
+          def signing = params.CI_APP_ENV == 'production'
+          if (signing) {
+            withCredentials([
+              file(credentialsId: 'android-keystore', variable: 'KEYSTORE'),
+              usernamePassword(credentialsId: 'android-keystore-signing', usernameVariable: 'ANDROID_KEY_ALIAS', passwordVariable: 'ANDROID_KEYSTORE_PASSWORD'),
+            ]) {
+              // O keystore vai para builds/ci, montado em /artifacts no container.
+              sh '''
+                set +x
+                mkdir -p builds/ci && cp "$KEYSTORE" builds/ci/release.keystore
+                ANDROID_KEYSTORE_FILE=/artifacts/release.keystore ANDROID_KEY_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" \
+                  docker compose -f docker/ci/docker-compose.yml run --rm pipeline
+              '''
+            }
+          } else {
+            sh 'docker compose -f docker/ci/docker-compose.yml run --rm pipeline'
+          }
+        }
+      }
+    }
+  }
+
+  post {
+    success {
+      archiveArtifacts artifacts: 'builds/ci/*.apk', allowEmptyArchive: true
+    }
+    always {
+      sh 'rm -f builds/ci/release.keystore'
+    }
+  }
+}

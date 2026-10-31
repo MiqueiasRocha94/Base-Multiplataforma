@@ -1,0 +1,48 @@
+# Esteira emulada (docs/ambiente-e-build.md → "Esteira (CI)").
+# Roda scripts/ci.mjs numa cópia da árvore de trabalho atual (inclui mudanças não
+# commitadas): validação → deps:check (só aviso) → build web → build APK. A árvore do
+# host é montada só leitura; segredos e .env reais não entram na cópia.
+#
+#   docker compose -f docker/ci/docker-compose.yml build pipeline
+#   docker compose -f docker/ci/docker-compose.yml run --rm pipeline
+#     (atalhos: npm run docker:ci[:image])
+#
+# Parâmetros (variáveis do host, todas opcionais):
+#   CI_APP_ENV      homolog (padrão) | production
+#   CI_ENV_FILE     arquivo de ambiente do build (padrão .env.<CI_APP_ENV>.example)
+#   CI_STAGES       etapas separadas por vírgula (padrão: todas)
+#   ANDROID_KEYSTORE_*  assinatura do APK (homolog gera keystore automático; produção exige)
+# O APK sai em builds/ci/ no host.
+name: mpb-ci
+
+services:
+  pipeline:
+    build:
+      # Contexto = raiz do projeto (2 níveis acima deste compose).
+      context: ../..
+      dockerfile: docker/android.Dockerfile
+    image: capacitor-android-toolchain:latest
+    working_dir: /source
+    environment:
+      CI_APP_ENV: ${CI_APP_ENV:-homolog}
+      CI_ENV_FILE: ${CI_ENV_FILE:-}
+      CI_STAGES: ${CI_STAGES:-}
+      CI_ARTIFACTS_DIR: /artifacts
+      ANDROID_KEYSTORE_FILE: ${ANDROID_KEYSTORE_FILE:-}
+      ANDROID_KEYSTORE_PASSWORD: ${ANDROID_KEYSTORE_PASSWORD:-}
+      ANDROID_KEY_ALIAS: ${ANDROID_KEY_ALIAS:-}
+      ANDROID_KEY_PASSWORD: ${ANDROID_KEY_PASSWORD:-}
+      NEXT_TELEMETRY_DISABLED: 1
+    command: ["node", "/source/scripts/ci.mjs", "--source=/source", "--workdir=/workspace"]
+    volumes:
+      - ../..:/source:ro
+      - ../../builds/ci:/artifacts
+      - npm-cache:/root/.npm
+      - gradle-cache:/root/.gradle
+
+volumes:
+  npm-cache:
+    name: mpb-ci-npm-cache
+  # O mesmo cache do Gradle dos composes de App (homolog/develop).
+  gradle-cache:
+    name: mpb-gradle-cache

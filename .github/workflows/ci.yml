@@ -1,0 +1,67 @@
+# Esteira no GitHub Actions: checks + versionamento (docs/ambiente-e-build.md → "Esteira (CI)" e "Release").
+# Sem build de web/APK aqui — a esteira completa é a emulada (`npm run docker:ci`; modelo em ci.yml.example).
+# O commit de release traz "[skip ci]" e não dispara de novo (nativo do Actions).
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  check:
+    name: Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        run: npx next typegen && npm run typecheck
+
+      - run: npm run lint
+
+      - run: npm test
+
+      - name: Arquitetura
+        run: npm run check:arch
+
+      - name: Entrada de build sem código de dev
+        run: npm run dist:check
+
+  release:
+    name: Versionar
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run release

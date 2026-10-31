@@ -1,0 +1,56 @@
+# Esteira no GitHub Actions (docs/ambiente-e-build.md → "Esteira (CI)").
+# Modelo: para ativar, copie para .github/workflows/ci.yml. Roda o mesmo compose da
+# esteira emulada (docker/ci), então o resultado é o do `npm run docker:ci` local.
+# Commit com "[skip ci]" na mensagem não dispara (nativo do Actions).
+#
+# Parâmetros (Settings → Secrets and variables → Actions):
+#   vars.CI_APP_ENV       homolog (padrão) | production
+#   vars.CI_ENV_FILE      arquivo de ambiente versionado (padrão .env.<ambiente>.example)
+#   vars.CI_STAGES        etapas separadas por vírgula (padrão: todas)
+#   secrets.ANDROID_KEYSTORE_BASE64 + ANDROID_KEYSTORE_PASSWORD/_KEY_ALIAS/_KEY_PASSWORD
+#                         assinatura do APK (homolog gera keystore automático; produção exige)
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CI_APP_ENV: ${{ vars.CI_APP_ENV || 'homolog' }}
+      CI_ENV_FILE: ${{ vars.CI_ENV_FILE }}
+      CI_STAGES: ${{ vars.CI_STAGES }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # O keystore vai para builds/ci, montado em /artifacts no container.
+      - name: Keystore do APK
+        if: ${{ env.ANDROID_KEYSTORE_PASSWORD != '' }}
+        run: |
+          mkdir -p builds/ci
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > builds/ci/release.keystore
+          echo "ANDROID_KEYSTORE_FILE=/artifacts/release.keystore" >> "$GITHUB_ENV"
+
+      - name: Esteira
+        run: |
+          docker compose -f docker/ci/docker-compose.yml build pipeline
+          docker compose -f docker/ci/docker-compose.yml run --rm pipeline
+
+      - name: APK
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: builds/ci/*.apk
+          if-no-files-found: ignore
