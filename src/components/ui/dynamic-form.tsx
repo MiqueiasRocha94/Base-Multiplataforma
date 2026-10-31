@@ -31,6 +31,12 @@ export type DynamicFormProps = {
    * permanece 1 coluna.
    */
   columns?: "single" | "adaptive";
+  /**
+   * Oculta os rotulos acima dos campos (o `label` vira `aria-label` no editor).
+   * Usado por telas de credencial (login) que seguem o desenho "so placeholder
+   * + icone". Padrao: `false` (rotulos visiveis).
+   */
+  hideLabels?: boolean;
 };
 
 function displayText(value: FormValue): string {
@@ -72,8 +78,10 @@ function findNextEditableFieldKey(fields: DynamicFormField[], currentKey: string
   return null;
 }
 
-export function DynamicForm({ fields, values, mode, errors, onChange, columns = "single" }: DynamicFormProps) {
-  const { view } = useDevice();
+export function DynamicForm({ fields, values, mode, errors, onChange, columns = "single", hideLabels = false }: DynamicFormProps) {
+  // `view`: estrutura (select → tela de seleção só no layout mobile).
+  // `isTouch`: comportamento do input (editor com teclado virtual) — celular e tablet.
+  const { view, isTouch } = useDevice();
   const isMobile = view === "mobile";
   const readOnly = mode === "read";
 
@@ -110,7 +118,7 @@ export function DynamicForm({ fields, values, mode, errors, onChange, columns = 
   }, []);
 
   return (
-    <div className={cn("grid gap-4", columns === "adaptive" && !isMobile && "items-start lg:grid-cols-2")}>
+    <div className={cn("grid gap-4", columns === "adaptive" && "desktop:items-start desktop:lg:grid-cols-2 wide:items-start wide:grid-cols-2")}>
       {fields.map((field) => {
         const value = values[field.key];
         const error = errors?.[field.key];
@@ -119,14 +127,16 @@ export function DynamicForm({ fields, values, mode, errors, onChange, columns = 
 
         return (
           <div key={field.key} className="grid gap-1.5">
-            <Label>{field.label}</Label>
+            {hideLabels ? null : <Label>{field.label}</Label>}
 
             {readOnly ? (
               <p className="rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-text">{displayText(value)}</p>
             ) : field.kind === "switch" ? (
               <div className="flex items-center gap-3">
                 <Switch checked={Boolean(value)} onCheckedChange={(checked) => onChange?.(field.key, checked)} />
-                <span className="text-sm text-text-muted">{Boolean(value) ? "Sim" : "Nao"}</span>
+                {/* Sem rótulo acima (hideLabels), o próprio rótulo vai ao lado: o
+                    switch sozinho não diz o que liga. */}
+                <span className="text-sm text-text-muted">{hideLabels ? field.label : Boolean(value) ? "Sim" : "Nao"}</span>
               </div>
             ) : field.kind === "select" ? (
               isMobile ? (
@@ -165,7 +175,7 @@ export function DynamicForm({ fields, values, mode, errors, onChange, columns = 
                 field={field}
                 value={value}
                 error={error}
-                isMobile={isMobile}
+                touch={isTouch}
                 focusKey={focusKey}
                 nextField={nextField}
                 onChange={onChange}

@@ -19,7 +19,7 @@ export function NotFoundContent() {
   const router = useRouter();
   const { session } = useAuth();
   const { dictionary } = useLanguage();
-  const home = session ? "/portal/home" : "/home";
+  const home = session ? "/portal/home" : "/login";
 
   useEffect(() => {
     const timeout = setTimeout(() => router.push(home), REDIRECT_MS);

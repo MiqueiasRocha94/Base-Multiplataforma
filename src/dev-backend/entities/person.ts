@@ -50,6 +50,8 @@ export const PERSON_CONTRACT: EntityContract = {
         relationship: { entity: "departments", labelField: "name", valueField: "id" },
       },
       { name: "createdAt", type: "datetime", label: "Criado em", readOnly: true, hidden: true },
+      { name: "photo", type: "file", label: "Foto de perfil" },
+      { name: "photos", type: "files", label: "Galeria" },
     ],
   },
   ui: {

@@ -1,7 +1,5 @@
 "use client";
 
-import { useDevice } from "@/contexts/DeviceContext";
-import { useNavigation } from "@/contexts/NavigationContext";
 import { useSystemContext } from "@/contexts/SystemContext";
 import { BreadCrumb } from "@/components/bread-crumb";
 import { RouteLoadingOverlay } from "@/components/route-loading-overlay";
@@ -9,38 +7,50 @@ import { cn } from "@/lib/utils";
 
 /**
  * Conteudo principal do layout web: flex column com tres regioes.
- * 1. Topo (fixo): breadcrumb a esquerda + botoes tipados destructive/special a
- *    direita (portalizados pelo Button via chrome do SystemContext).
+ * 1. Topo (fixo): breadcrumb a esquerda + botoes tipados destructive/special
+ *    (acoes especificas da tela) no centro/direita, portalizados pelo Button via
+ *    chrome do SystemContext. Notificacoes ficam no Header, junto do perfil.
  * 2. Miolo: UNICO elemento com scroll vertical.
- * 3. Acoes (fixa, condicional): so existe quando ha >= 1 botao `type: action`
- *    montado na pagina.
+ * 3. Rodape (fixo, condicional): Voltar · centro (`ScreenFooter`) · acoes; so
+ *    existe quando a pagina montou algum deles.
  */
 export function MainContent({
   children,
   className,
   contentClassName,
-  mobile = false,
 }: {
   children?: React.ReactNode;
   className?: string;
   contentClassName?: string;
   mobile?: boolean;
 }) {
-  const { view } = useDevice();
-  const { placement, isPublicAuthScreen } = useNavigation();
-  const { footerHeight, mainContentCardMargin, mainContentMode, chrome } = useSystemContext();
-  const { setWebTopRightEl, setWebActionsEl, actionButtonCount } = chrome;
-  const isCardMode = mainContentMode === "card";
+  const { mainContentCardMargin, mainContentMode, mainContentBare, chrome, isMobile } = useSystemContext();
+  const {
+    setWebTopRightEl,
+    setWebActionsEl,
+    setWebBackEl,
+    setWebFooterEl,
+    actionButtonCount,
+    backButtonCount,
+    footerContentCount,
+  } = chrome;
+  // Telas publicas de auth (login/start): o MainContent e a UNICA regiao visivel
+  // e o conteudo ocupa toda a area, sem padding, card ou top bar (full-bleed).
+  const publicFull = mainContentBare;
+  const isCardMode = mainContentMode === "card" && !publicFull;
   const containerPadding = isCardMode ? mainContentCardMargin : 0;
-  const mobileFooterOffset = view === "mobile" && placement === "footer" ? Math.max(footerHeight, 70) : 0;
-  // Telas publicas de auth nao mostram o chrome do app (fonte unica em Navigation).
-  const showTopBar = !mobile && !isPublicAuthScreen;
-  const showActionsBar = !mobile && actionButtonCount > 0;
+  const showTopBar = !isMobile && !mainContentBare;
+  const showActionsBar = !isMobile && actionButtonCount + backButtonCount + footerContentCount > 0;
   const innerContentClassName = cn(
     "flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden",
-    mobile
-      ? "w-full px-4 py-4"
-      : cn("w-full px-6 py-6", isCardMode ? "mx-auto max-w-6xl" : "max-w-none"),
+    // Respiro de 2px entre a área rolável e o rodapé (barra de ações no web,
+    // navbar no mobile): o conteúdo rolando não encosta na borda da barra.
+    !publicFull && "mb-2",
+    publicFull
+      ? "w-full"
+      : isMobile
+        ? "w-full px-2 py-3 wide:px-4 wide:py-4"
+        : cn("w-full px-6 py-6", isCardMode ? "mx-auto max-w-6xl" : "max-w-none"),
     contentClassName,
   );
 
@@ -63,27 +73,32 @@ export function MainContent({
           {showTopBar ? (
             <div
               data-layout-region="content-top"
-              className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-surface px-6 py-3"
+              className="flex min-h-[var(--layout-content-top-height)] shrink-0 items-center justify-between gap-3 border-b border-border bg-surface px-6 py-3"
             >
               <BreadCrumb mode="full" className="min-w-0" />
-              <div ref={setWebTopRightEl} className="flex items-center gap-2" />
+              {/* Centro/direita: ações específicas da tela (`type="special"`/
+                  `"destructive"`) e, futuramente, ações em lote. Notificações
+                  ficam no header, junto do perfil. */}
+              <div ref={setWebTopRightEl} className="flex min-w-0 flex-1 items-center justify-end gap-2" />
             </div>
           ) : null}
 
-          <div
-            data-layout-scroll="content"
-            className={innerContentClassName}
-            style={{ paddingBottom: mobileFooterOffset || undefined }}
-          >
+          <div data-layout-scroll="content" className={innerContentClassName}>
             {children}
           </div>
 
           {showActionsBar ? (
+            // Rodapé em três: saída (`back`) à esquerda · `main.footer` (ex.:
+            // total e paginação) ao centro · ações à direita. Aparência dos
+            // botões: `[data-region="actions"]` em globals.css.
             <div
               data-layout-region="content-actions"
-              ref={setWebActionsEl}
-              className="flex shrink-0 items-center justify-center gap-3 border-t border-border bg-surface px-4 py-3 [&>button]:h-auto [&>button]:min-w-36 [&>button]:px-8 [&>button]:py-3 [&>button]:text-sm"
-            />
+              className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 border-t border-border bg-surface px-4"
+            >
+              <div ref={setWebBackEl} data-region="actions" data-footer-slot="start" />
+              <div ref={setWebFooterEl} className="flex min-w-0 items-center justify-center gap-2 text-sm text-text-muted" />
+              <div ref={setWebActionsEl} data-region="actions" data-footer-slot="end" />
+            </div>
           ) : null}
         </div>
       </div>

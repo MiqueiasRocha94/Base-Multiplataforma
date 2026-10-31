@@ -34,6 +34,9 @@ type ContextualNavigation = {
   centerNode: NavigationItem | null;
   centerPage: number;
   isMenuRoot: boolean;
+  // href do nó RAIZ da pilha aberta: identifica DE ONDE o submenu foi aberto
+  // (o botão Menu central ou um slot fixo), para o toggle ficar na origem.
+  rootHref: string | null;
   pageItems: NavigationItem[];
   showMore: boolean;
   onCenter: () => void;
@@ -52,16 +55,7 @@ type NavigationContextValue = {
   mobileRightItems: NavigationItem[];
   placement: NavigationPlacement;
   contextualNav: ContextualNavigation;
-  /**
-   * Tela publica "nua" de autenticacao (sem sessao em `/`, `/home` ou `/login`):
-   * os shells suprimem o chrome do app (header/breadcrumb) nessas rotas. Fonte
-   * unica — antes duplicada em MainContent e MobileAppShell.
-   */
-  isPublicAuthScreen: boolean;
 };
-
-// Rotas publicas que, sem sessao, exibem um layout "nu" (sem chrome do app).
-const PUBLIC_AUTH_ROUTES = new Set(["/", "/home", "/login"]);
 
 const NavigationContext = createContext<NavigationContextValue | null>(null);
 
@@ -155,6 +149,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       centerNode: top ? top.node : null,
       centerPage: top ? top.page : 0,
       isMenuRoot: top?.node.href === MENU_NODE_ID,
+      rootHref: stack.length ? stack[0].node.href : null,
       pageItems: window.items,
       showMore: window.more,
       onCenter,
@@ -173,9 +168,8 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       mobileRightItems: mobileGroups.right,
       placement: derived.placement,
       contextualNav,
-      isPublicAuthScreen: !session && PUBLIC_AUTH_ROUTES.has(pathname),
     };
-  }, [derived, stack, pathname, session, onCenter, onNextPage, onOpenNode, onCollapse]);
+  }, [derived, stack, pathname, onCenter, onNextPage, onOpenNode, onCollapse]);
 
   return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;
 }

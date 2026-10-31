@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "theme": "system",
-  "radiusPreset": "default",
-  "fontPreset": "system",
+  "theme": "dark",
+  "radiusPreset": "light",
+  "fontPreset": "manrope",
   "fontScale": 1,
   "layout": {
     "headerVisible": true,
@@ -25,37 +25,38 @@
     "mainContentMode": "full",
     "mainContentCardMargin": 10,
     "zIndexHeader": 1000,
-    "zIndexFooter": 1000
+    "zIndexFooter": 1000,
+    "accountPlacement": "auto"
   },
   "colorScheme": {
     "activeSchemeId": "scheme-mr58y4tg",
     "schemes": [
       {
         "id": "scheme-mr58y4tg",
-        "name": "Novo esquema",
+        "name": "Base",
         "builtin": false,
         "light": {
-          "primary": "#9e0b00",
-          "secondary": "#0a0a0a",
+          "primary": "#2563eb",
+          "secondary": "#3e8744",
           "tertiary": "#f5b400"
         }
       }
     ],
     "areas": {
       "header": {
-        "custom": false,
+        "custom": true,
         "colors": {
-          "background": "#fffdf8",
-          "foreground": "#1f2933",
-          "border": "#d8d1c2"
+          "background": "#0d1420",
+          "foreground": "#ffffff",
+          "border": "#1f2a3a"
         }
       },
       "footer": {
-        "custom": false,
+        "custom": true,
         "colors": {
-          "background": "#fffdf8",
+          "background": "#ffffff",
           "foreground": "#52606d",
-          "border": "#d8d1c2"
+          "border": "#e5e7eb"
         }
       },
       "leftSidebar": {
@@ -63,15 +64,15 @@
         "colors": {
           "background": "#000000",
           "foreground": "#ffffff",
-          "border": "#f0a400"
+          "border": "#0d0d0c"
         }
       },
       "rightSidebar": {
-        "custom": false,
+        "custom": true,
         "colors": {
-          "background": "#fffdf8",
+          "background": "#ffffff",
           "foreground": "#1f2933",
-          "border": "#d8d1c2"
+          "border": "#e5e7eb"
         }
       }
     },

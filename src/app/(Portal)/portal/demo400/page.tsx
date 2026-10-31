@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { LucideCircleAlert } from "lucide-react";
 import { faker } from "@faker-js/faker";
 
@@ -23,7 +24,8 @@ const responses = [
 ];
 
 export default function Demo400Page() {
-    const response = responses[Math.floor(Math.random() * responses.length)];
+    // Sorteada uma vez por montagem (fora do render, que precisa ser puro).
+    const [response] = useState(() => responses[Math.floor(Math.random() * responses.length)]);
 
     return (
         <StatusScreen

@@ -6,8 +6,8 @@ export const themeOptions: Array<{ value: AppTheme; labelKey: "themeSystem" | "t
   { value: "dark", labelKey: "themeDark" },
 ];
 
-export const fontPresets: Array<{ value: FontPreset; labelKey: "fontSystem" | "fontReading" | "fontCompact" }> = [
+export const fontPresets: Array<{ value: FontPreset; labelKey: "fontManrope" | "fontSystem" | "fontReading" }> = [
+  { value: "manrope", labelKey: "fontManrope" },
   { value: "system", labelKey: "fontSystem" },
   { value: "reading", labelKey: "fontReading" },
-  { value: "compact", labelKey: "fontCompact" },
 ];

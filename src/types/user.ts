@@ -1,4 +1,5 @@
 import type { AppLocale } from "@/lib/i18n/settings";
+// eslint-disable-next-line no-restricted-imports -- D07 (desvio conhecido): tipo de tema vem do provider; corrige movendo para types/theme.ts
 import type { AppTheme } from "@/contexts/ThemeProvider";
 
 /**
@@ -28,21 +29,27 @@ export type OrganizationBondType = "EMPLOYEE" | "PARTNER" | "CONTRACTOR" | "CUST
 export type AuthEnvironment = "PRODUCTION" | "HOMOLOG" | "DEVELOPMENT";
 
 /**
- * Papel/perfil de acesso. Tipado como uniao para o dominio demo (spec §1).
- * O backend real pode reabrir para `string` sem impacto na UI.
+ * Papel/perfil de acesso. Tipado como uniao para o dominio demo; o backend real
+ * pode reabrir para `string` sem impacto na UI.
  */
 export type Role = "USER" | "ANALISTA" | "ADMIN";
 
 /**
- * Permissao granular no formato "recurso.acao". Uniao para o dominio demo
- * (entidade `Person`); reabra conforme o backend.
+ * Permissoes CONHECIDAS do base no formato "recurso.acao" (dominio demo:
+ * entidade `Person`). Servem de autocomplete.
  */
-export type Permission =
+export type PermissaoConhecida =
   | "pessoa.visualizar"
   | "pessoa.criar"
   | "pessoa.editar"
   | "pessoa.remover"
   | "pessoa.exportar";
+
+/**
+ * Permissao granular. Alem das conhecidas, aceita os codigos que o backend
+ * devolver na sessao. `(string & {})` preserva o autocomplete das conhecidas.
+ */
+export type Permission = PermissaoConhecida | (string & {});
 
 /** Estado da autenticacao corrente. */
 export type UserAuthentication = {

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { LucideExternalLink, LucideX } from "lucide-react";
 
+import { useDocumentContent } from "@/hooks/use-document-content";
 import { renderMarkdown } from "@/lib/docs/markdown";
 import type { FileItem } from "@/types/file-item";
 import { cn } from "@/lib/utils";
@@ -74,34 +75,9 @@ export function DocumentReader({
   className,
 }: DocumentReaderProps) {
   const [zoomed, setZoomed] = useState(false);
-  // Guarda o texto buscado junto da uri de origem, para nunca exibir o conteúdo
-  // de um arquivo anterior enquanto o novo ainda carrega.
-  const [fetched, setFetched] = useState<{ uri: string; text: string } | null>(null);
-
   const kind = file ? resolveDocumentKind(file) : "other";
-  // `content` (prop) tem prioridade e sempre reflete o documento atual; o texto
-  // buscado só entra quando o conteúdo não foi passado e corresponde ao arquivo.
-  const markdownSource = content ?? (file && fetched?.uri === file.uri ? fetched.text : null);
-
-  // Markdown sem `content` explícito: busca o texto do arquivo (http/blob/data).
-  useEffect(() => {
-    if (!file || kind !== "markdown" || content != null) {
-      return;
-    }
-    let active = true;
-    const { uri } = file;
-    fetch(uri)
-      .then((response) => response.text())
-      .then((value) => {
-        if (active) setFetched({ uri, text: value });
-      })
-      .catch(() => {
-        if (active) setFetched({ uri, text: "" });
-      });
-    return () => {
-      active = false;
-    };
-  }, [file, kind, content]);
+  const document = useDocumentContent(file && kind === "markdown" && content == null ? file.uri : null);
+  const markdownSource = content ?? document.text;
 
   if (!file) {
     return null;
@@ -137,7 +113,12 @@ export function DocumentReader({
           />
         );
       case "markdown":
-        return markdownSource == null ? (
+        return document.error ? (
+          <div role="alert" className="text-danger">
+            <p>{document.error}</p>
+            <button type="button" className="underline" onClick={document.retry}>Tentar novamente</button>
+          </div>
+        ) : markdownSource == null ? (
           <p className="text-sm text-text-muted">…</p>
         ) : (
           <article className="doc-prose w-full" dangerouslySetInnerHTML={{ __html: renderMarkdown(markdownSource) }} />

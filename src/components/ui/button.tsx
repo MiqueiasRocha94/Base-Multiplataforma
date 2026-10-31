@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
+import { ArrowLeft } from "lucide-react";
 
 import { useDevice } from "@/contexts/DeviceContext";
 import { useSystemContext, type TypedButtonRegion } from "@/contexts/SystemContext";
@@ -16,9 +17,14 @@ type ButtonSize = "default" | "sm" | "lg" | "icon";
  * - `destructive`/`special`: capturado pela regiao de TOPO (web: topo do
  *   MainContent, direita | mobile: header, direita).
  * - `action`: capturado pela regiao de ACOES (web: rodape do MainContent |
- *   mobile: footer).
+ *   mobile: segunda barra, aberta pelo botao "Acoes" da navbar). So OPERACOES
+ *   (editar, salvar, exportar...).
+ * - `back`: SAIDA da tela (voltar/fechar/cancelar) — e navegacao, nao acao. Mobile com
+ *   navbar: celula propria da navbar, a um toque (`Home · Voltar · Acoes · Menu`);
+ *   sem navbar (pagina publica) ou sem celula livre: barra de acoes. Web: rodape
+ *   do MainContent, a esquerda (acoes a direita).
  */
-type ButtonType = "none" | "destructive" | "special" | "action";
+type ButtonType = "none" | "destructive" | "special" | "action" | "back";
 
 const variantClasses: Record<ButtonVariant, string> = {
   default: "bg-primary text-on-primary hover:bg-primary-strong",
@@ -55,6 +61,7 @@ export type ButtonProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "t
 
 function resolveRegion(type: ButtonType): TypedButtonRegion | null {
   if (type === "action") return "actions";
+  if (type === "back") return "back";
   if (type === "destructive" || type === "special") return "top";
   return null;
 }
@@ -74,7 +81,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
   ref,
 ) {
   const { view } = useDevice();
-  const { headerRightEl, mobileActionsEl, webTopRightEl, webActionsEl, registerTypedButton } = useSystemContext().chrome;
+  const { headerRightEl, mobileActionsEl, mobileBackEl, webTopRightEl, webActionsEl, webBackEl, registerTypedButton } =
+    useSystemContext().chrome;
 
   const region = resolveRegion(type);
 
@@ -88,10 +96,33 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
     : view === "mobile"
       ? region === "top"
         ? headerRightEl
-        : mobileActionsEl
+        : region === "back"
+          ? (mobileBackEl ?? mobileActionsEl)
+          : mobileActionsEl
       : region === "top"
         ? webTopRightEl
-        : webActionsEl;
+        : region === "back"
+          ? webBackEl
+          : webActionsEl;
+
+  // Saída na navbar: desenhada como CÉLULA de navegação (ícone + rótulo), não
+  // como botão de ação — é navegação.
+  if (region === "back" && target != null && target === mobileBackEl) {
+    return createPortal(
+      <button
+        ref={ref}
+        type={htmlType}
+        disabled={disabled || loading}
+        data-button-type={type}
+        className="flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-2 text-xs font-medium text-[color:var(--color-left-sidebar-foreground)] transition hover:bg-[color:color-mix(in_srgb,var(--color-left-sidebar-foreground)_12%,transparent)] disabled:cursor-not-allowed disabled:opacity-60"
+        {...props}
+      >
+        <ArrowLeft aria-hidden="true" className="size-5" />
+        <span className="max-w-full truncate">{children}</span>
+      </button>,
+      target,
+    );
+  }
 
   const button = (
     <button

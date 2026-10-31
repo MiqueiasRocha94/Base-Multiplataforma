@@ -5,7 +5,7 @@ import Image from "next/image";
 
 import { useDevice } from "@/contexts/DeviceContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { languageFlags, languageLabels, locales } from "@/lib/i18n/settings";
+import { enabledLocales, languageFlags, languageLabels } from "@/lib/i18n/settings";
 import { cn } from "@/lib/utils";
 
 function ChevronDownIcon({ open }: { open: boolean }) {
@@ -53,7 +53,7 @@ export function LocaleSwitcher() {
   if (compactMode) {
     return (
       <nav aria-label={dictionary.common.locale} className="flex items-center gap-1 rounded-full border border-border bg-surface/85 p-1 text-sm shadow-sm backdrop-blur">
-        {locales.map((targetLocale) => {
+        {enabledLocales.map((targetLocale) => {
           const active = targetLocale === locale;
 
           return (
@@ -104,7 +104,7 @@ export function LocaleSwitcher() {
 
       {open ? (
         <ul className="absolute right-0 top-[calc(100%+0.5rem)] z-40 grid min-w-56 gap-1 rounded-[var(--radius-xl)] border border-border bg-surface p-2 shadow-[var(--shadow-soft)]">
-          {locales.map((targetLocale) => {
+          {enabledLocales.map((targetLocale) => {
             const active = targetLocale === locale;
 
             return (

@@ -9,6 +9,7 @@ export type FileItem = {
   mimeType?: string;
 };
 
+// eslint-disable-next-line no-restricted-syntax -- D06 (desvio conhecido): valor de runtime em types/; corrige movendo para lib/
 export function generateFileId(): string {
   return `file-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }

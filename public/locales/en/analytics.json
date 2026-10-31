@@ -1,0 +1,17 @@
+{
+  "badge": "Analytics",
+  "title": "Charts demo",
+  "subtitle": "The most-used chart types in the shadcn style (Recharts), with theme tokens and desktop/mobile adaptation.",
+  "areaTitle": "Area Chart",
+  "areaSubtitle": "Visits per month, desktop and mobile stacked.",
+  "barTitle": "Bar Chart",
+  "barSubtitle": "Bar comparison per month.",
+  "lineTitle": "Line Chart",
+  "lineSubtitle": "Monthly trend as lines.",
+  "pieTitle": "Pie Chart",
+  "pieSubtitle": "Visit distribution by channel.",
+  "radialTitle": "Radial Chart",
+  "radialSubtitle": "Channels as radial bars.",
+  "radarTitle": "Radar Chart",
+  "radarSubtitle": "Volume per process stage."
+}

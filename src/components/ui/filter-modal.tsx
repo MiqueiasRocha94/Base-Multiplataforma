@@ -4,9 +4,9 @@ import { useState } from "react";
 import { LucideX } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
-import { useDevice } from "@/contexts/DeviceContext";
-import { cn } from "@/lib/utils";
+import { SelectOne } from "@/components/ui/select-one";
 
 export type FilterFieldKind = "text" | "number" | "select" | "date-range";
 
@@ -40,8 +40,8 @@ const DEFAULT_LABELS: FilterModalLabels = {
   clear: "Limpar",
   apply: "Aplicar",
   all: "Todos",
-  customFrom: "De (AAAA-MM-DD)",
-  customTo: "Ate (AAAA-MM-DD)",
+  customFrom: "De",
+  customTo: "Até",
 };
 
 type FilterModalProps = {
@@ -80,62 +80,54 @@ function FieldControl({
 
       {field.kind === "date-range" ? (
         <>
-          <div className="flex flex-wrap gap-2">
-            {field.options?.map((option) => {
-              const selected = draft[field.key] === option.label;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() =>
-                    setDraft((current) => ({
-                      ...current,
-                      [field.key]: option.label,
-                      ...(option.id === "custom" ? {} : { [`${field.key}From`]: "", [`${field.key}To`]: "" }),
-                    }))
-                  }
-                  className={cn(
-                    "rounded-full border px-3 py-2 text-sm font-semibold transition",
-                    selected
-                      ? "border-primary bg-primary text-white"
-                      : "border-border text-text hover:bg-[color:var(--color-surface-strong)]",
-                  )}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
+          {/* SelectOne (adaptativo): web = <select>, mobile = overlay. Guarda o
+              LABEL no draft (contrato do generic-table); usa os ids reais só para
+              detectar a opção "custom" e limpar o intervalo. */}
+          <SelectOne
+            ariaLabel={field.label}
+            title={field.label}
+            placeholder={field.placeholder ?? allLabel}
+            value={field.options?.find((option) => option.label === draft[field.key])?.id ?? ""}
+            options={field.options ?? []}
+            onChange={(id) => {
+              const option = field.options?.find((item) => String(item.id) === id);
+              setDraft((current) => ({
+                ...current,
+                [field.key]: option?.label ?? "",
+                ...(id === "custom" ? {} : { [`${field.key}From`]: "", [`${field.key}To`]: "" }),
+              }));
+            }}
+          />
           {isCustom ? (
             <div className="mt-1 grid grid-cols-2 gap-2">
-              <Input
-                type="date"
-                aria-label={customFromLabel}
+              <DateField
+                ariaLabel={customFromLabel}
+                title={customFromLabel}
                 value={draft[`${field.key}From`] ?? ""}
-                onChange={(event) => setDraft((current) => ({ ...current, [`${field.key}From`]: event.target.value }))}
+                max={draft[`${field.key}To`] || undefined}
+                onChange={(valor) => setDraft((current) => ({ ...current, [`${field.key}From`]: valor }))}
               />
-              <Input
-                type="date"
-                aria-label={customToLabel}
+              <DateField
+                ariaLabel={customToLabel}
+                title={customToLabel}
                 value={draft[`${field.key}To`] ?? ""}
-                onChange={(event) => setDraft((current) => ({ ...current, [`${field.key}To`]: event.target.value }))}
+                min={draft[`${field.key}From`] || undefined}
+                onChange={(valor) => setDraft((current) => ({ ...current, [`${field.key}To`]: valor }))}
               />
             </div>
           ) : null}
         </>
       ) : field.kind === "select" ? (
-        <select
+        // SelectOne adaptativo. O draft guarda o LABEL (id = label aqui); para
+        // limpar um filtro use "Todos" (quando houver) ou o botão Limpar.
+        <SelectOne
+          ariaLabel={field.label}
+          title={field.label}
+          placeholder={field.placeholder ?? allLabel}
           value={draft[field.key] ?? ""}
-          onChange={(event) => setDraft((current) => ({ ...current, [field.key]: event.target.value }))}
-          className="h-12 rounded-2xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary"
-        >
-          <option value="">{field.placeholder ?? allLabel}</option>
-          {field.options?.map((option) => (
-            <option key={option.id} value={option.label}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+          options={(field.options ?? []).map((option) => ({ id: option.label, label: option.label }))}
+          onChange={(id) => setDraft((current) => ({ ...current, [field.key]: id }))}
+        />
       ) : (
         <Input
           type={field.kind === "number" ? "number" : "text"}
@@ -165,25 +157,18 @@ export function FilterModal({ open, ...props }: FilterModalProps) {
 }
 
 function FilterModalBody({ basicFields, entityFields, values, labels, onApply, onClose }: Omit<FilterModalProps, "open">) {
-  const { view } = useDevice();
-  const isMobile = view === "mobile";
   const resolvedLabels = { ...DEFAULT_LABELS, ...labels };
   const [draft, setDraft] = useState<FilterValues>(values);
 
   return (
     <div
-      className={cn(
-        "fixed inset-0 z-[1200] flex bg-black/40 backdrop-blur-sm",
-        isMobile ? "items-end justify-center" : "items-center justify-center p-4",
-      )}
+      // Mobile: folha ancorada embaixo; tablet/desktop: diálogo centralizado.
+      className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm mobile:items-end mobile:p-0 wide:items-center wide:p-4"
       onClick={onClose}
     >
       <div
         onClick={(event) => event.stopPropagation()}
-        className={cn(
-          "flex max-h-[90vh] w-full flex-col overflow-hidden border border-border bg-surface shadow-[var(--shadow-soft)]",
-          isMobile ? "rounded-t-[var(--radius-2xl)]" : "max-w-lg rounded-[var(--radius-2xl)]",
-        )}
+        className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-[var(--radius-2xl)] border border-border bg-surface shadow-[var(--shadow-soft)] mobile:max-w-none mobile:rounded-b-none wide:max-w-lg wide:rounded-b-[var(--radius-2xl)]"
       >
         <div className="flex items-center justify-between gap-4 border-b border-border bg-primary px-5 py-4 text-white">
           <p className="text-base font-bold">{resolvedLabels.title}</p>

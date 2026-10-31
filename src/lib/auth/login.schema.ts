@@ -1,6 +1,8 @@
 import { z } from "zod";
 
+// Login: usuario (nao necessariamente e-mail) + senha em texto. A regra
+// da senha e do servidor — aqui so exige o preenchimento.
 export const loginSchema = z.object({
-  email: z.email("Informe um email valido."),
-  password: z.string().min(6, "A senha precisa ter pelo menos 6 caracteres."),
+  login: z.string().trim().min(1, "Informe o login."),
+  password: z.string().min(1, "Informe a senha."),
 });

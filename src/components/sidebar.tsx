@@ -14,6 +14,7 @@ import {
     type SidebarLayoutMode,
     type SidebarSide,
     type SpecialPanelId,
+    type SpecialPanelState,
     useSystemContext,
 } from "@/contexts/SystemContext";
 
@@ -113,12 +114,20 @@ export function Sidebar({
     const {
         openPanel,
         closePanel,
-        developerPanel,
         menuPanel,
+        // @dev-only:start
+        developerPanel,
         systemPanel,
+        // @dev-only:end
     } = useSystemContext();
-    const getPanel = (id: SpecialPanelId) =>
-        id === "developer" ? developerPanel : id === "menu" ? menuPanel : systemPanel;
+    const panels: Record<SpecialPanelId, SpecialPanelState> = {
+        menu: menuPanel,
+        // @dev-only:start
+        developer: developerPanel,
+        system: systemPanel,
+        // @dev-only:end
+    };
+    const getPanel = (id: SpecialPanelId) => panels[id];
 
     const items = useMemo(() => {
         return Children.toArray(children)
@@ -142,7 +151,7 @@ export function Sidebar({
     const activePanel = activeItem ? getPanel(activeItem.id) : null;
     // O painel "menu" (navegacao) vira um rail: colapsado (so icones) por
     // padrao, expandindo para a largura configurada ao passar o mouse/focar.
-    // Outros paineis (system/developer) mantem a largura fixa de sempre.
+    // Outros paineis mantem a largura fixa de sempre.
     const isNavRail = activeItem?.id === "menu";
 
     if (!visible) {
@@ -260,15 +269,21 @@ export function SidebarPanelFrame({
     return (
         <Card
             style={sideStyle}
+            // Região de painel: os tokens da PÁGINA (superfície, texto, borda) são
+            // remapeados para as cores da sidebar (globals.css) — o conteúdo do
+            // painel segue o esquema de cores da área, não o tema da página.
+            data-region={side ? "sidebar-panel" : undefined}
             className={cn(
                 "group flex flex-col overflow-hidden",
                 displayMode && side
                     ? resolvePanelFrameClass(displayMode, side)
-                    : "sticky top-24 max-h-[calc(100vh-10rem)]",
+                    : "sticky top-24 max-h-[calc(100dvh-10rem)]",
                 className
             )}
         >
-            <CardHeader className="sidebar-rail-header mb-2 border-b border-border/60">
+            {/* min-h desconta 1px da borda superior do Card para a borda inferior
+                alinhar com a do topo do MainContent. */}
+            <CardHeader className="sidebar-rail-header mb-2 min-h-[calc(var(--layout-content-top-height)-1px)] content-center border-b border-border/60">
                 <div className="flex items-start justify-between gap-4">
                     <div className="sidebar-rail-title grid gap-3">
                         <CardTitle>{title}</CardTitle>
@@ -286,7 +301,7 @@ export function SidebarPanelFrame({
                             "inline-flex size-10 items-center justify-center rounded-full border border-border text-text-muted transition hover:bg-[color:var(--color-surface-strong)]",
                             headerCollapsed ? "sidebar-rail-close-toggle" : undefined,
                         )}
-                        aria-label={dictionary.system.close}
+                        aria-label={dictionary.common.close}
                     >
                         <LucideX className="h-4 w-4" />
                     </button>
@@ -295,7 +310,11 @@ export function SidebarPanelFrame({
 
             <CardContent
                 className={cn(
-                    "sidebar-rail-content grid min-h-0 flex-1 gap-4 overflow-y-hidden p-4 group-hover:overflow-y-auto",
+                    "sidebar-rail-content grid min-h-0 flex-1 gap-4 p-4",
+                    // Rail do desktop (recebe displayMode+side): rola só ao expandir
+                    // no hover. Painel avulso (dev/system, ex.: overlay mobile sem
+                    // hover): rola sempre, senão o conteúdo alto fica cortado.
+                    displayMode && side ? "overflow-y-hidden group-hover:overflow-y-auto" : "overflow-y-auto",
                     contentClassName
                 )}
             >

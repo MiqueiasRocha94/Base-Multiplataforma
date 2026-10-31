@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/chart";
 import type { TrafficPoint } from "@/types/analytics";
 
-import { trafficConfig } from "./analytics-charts-config";
+import { trafficConfig } from "@/lib/analytics/chart-config";
 
 export function TrafficBarChart({ data }: { data: TrafficPoint[] }) {
   return (

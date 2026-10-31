@@ -20,11 +20,16 @@ export async function requestBiometricAuth(reason: string): Promise<BiometricAut
   }
 
   const { BiometricAuth } = await import("@aparajita/capacitor-biometric-auth");
-  const result = await BiometricAuth.authenticate({
-    reason,
-    cancelTitle: "Cancelar",
-    allowDeviceCredential: true,
-  });
-
-  return { authenticated: Boolean(result) };
+  // `authenticate()` resolve sem valor no sucesso e lança `BiometryError` na falha
+  // ou no cancelamento — o resultado é a promessa resolver, não o retorno.
+  try {
+    await BiometricAuth.authenticate({
+      reason,
+      cancelTitle: "Cancelar",
+      allowDeviceCredential: true,
+    });
+    return { authenticated: true };
+  } catch {
+    return { authenticated: false };
+  }
 }

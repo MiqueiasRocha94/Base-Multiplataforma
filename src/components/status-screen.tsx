@@ -21,6 +21,8 @@ export type StatusScreenProps = {
   tone?: StatusTone;
   title: string;
   description?: string;
+  /** Linha de diagnóstico acima do título (ex.: origem do erro no modo desenvolvedor). */
+  meta?: string;
   digest?: string;
   actions?: StatusAction[];
   className?: string;
@@ -53,6 +55,7 @@ export function StatusScreen({
   tone = "primary",
   title,
   description,
+  meta,
   digest,
   actions = [],
   className,
@@ -66,8 +69,11 @@ export function StatusScreen({
           ) : null}
           {code ? <p className={cn("text-7xl font-black leading-none tracking-tight", TONE_TEXT[tone])}>{code}</p> : null}
           <div className="grid gap-2">
+            {meta ? (
+              <p className={cn("mx-auto w-fit rounded-full px-3 py-1 text-xs font-semibold", TONE_BADGE[tone])}>{meta}</p>
+            ) : null}
             <h1 className="text-2xl font-semibold tracking-tight text-text">{title}</h1>
-            {description ? <p className="text-sm leading-6 text-text-muted">{description}</p> : null}
+            {description ? <p className="break-words text-sm leading-6 text-text-muted">{description}</p> : null}
             {digest ? <p className="font-mono text-xs text-text-muted">#{digest}</p> : null}
           </div>
           {actions.length > 0 ? (

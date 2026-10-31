@@ -6,9 +6,11 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useDevice } from "@/contexts/DeviceContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
+import { consumePendingAccountMenuOpen, subscribeOpenAccountMenu } from "@/lib/account-menu-signal";
 import { cn } from "@/lib/utils";
 
 function getInitials(value: string) {
@@ -35,10 +37,26 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
   const { dictionary } = useLanguage();
-  const { session, signOut } = useAuth();
+  const { session, leaveSession } = useAuth();
+  const { view } = useDevice();
   const [open, setOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [position, setPosition] = useState<DropdownPosition>({ align: "right", left: 0, right: 0, top: 0 });
+
+  // Abertura programática: a tela Profile (mobile-only) pede a abertura do menu
+  // ao redirecionar para a Home no desktop/tablet. Cobre os dois casos: sinal ao
+  // vivo (menu já montado) e pedido pendente feito antes deste montar.
+  useEffect(() => {
+    // setState via função local (mesmo idioma do DeviceContext) para não cair no
+    // lint `set-state-in-effect`.
+    const openIfPending = () => {
+      if (consumePendingAccountMenuOpen()) {
+        setOpen(true);
+      }
+    };
+    openIfPending();
+    return subscribeOpenAccountMenu(() => setOpen(true));
+  }, []);
 
   const closeMenu = () => {
     setOptionsOpen(false);
@@ -169,15 +187,19 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
           </div>
 
           <div className="grid gap-1 p-1">
-            <Link
-              href="/portal/profile"
-              onClick={() => {
-                closeMenu();
-              }}
-              className="rounded-[var(--radius-lg)] px-3 py-3 text-sm font-medium text-text transition hover:bg-[color:var(--color-surface-strong)]"
-            >
-              {dictionary.profile.menuProfile}
-            </Link>
+            {/* Perfil é tela mobile-only: no desktop/tablet a conta já É este
+                menu, então o link (que redirecionaria de volta) não aparece. */}
+            {view === "mobile" ? (
+              <Link
+                href="/portal/profile"
+                onClick={() => {
+                  closeMenu();
+                }}
+                className="rounded-[var(--radius-lg)] px-3 py-3 text-sm font-medium text-text transition hover:bg-[color:var(--color-surface-strong)]"
+              >
+                {dictionary.account.menuProfile}
+              </Link>
+            ) : null}
             <div className="border-t border-border/60 pt-1">
               <button
                 type="button"
@@ -185,7 +207,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
                 onClick={() => setOptionsOpen((current) => !current)}
                 className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-lg)] px-3 py-3 text-left text-sm font-medium text-text transition hover:bg-[color:var(--color-surface-strong)]"
               >
-                <span>{dictionary.profile.menuConfig}</span>
+                <span>{dictionary.account.menuConfig}</span>
                 <span className={cn("text-xs text-text-muted transition", optionsOpen && "rotate-180")}>▾</span>
               </button>
 
@@ -193,11 +215,11 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
                 <div className="grid gap-4 px-3 pb-3 pt-2">
                   <div className="flex flex-wrap items-start gap-3">
                     <div className="grid gap-2">
-                      <p className="text-sm font-medium text-text">{dictionary.profile.languageTitle}</p>
+                      <p className="text-sm font-medium text-text">{dictionary.account.languageTitle}</p>
                       <LocaleSwitcher />
                     </div>
                     <div className="grid gap-2">
-                      <p className="text-sm font-medium text-text">{dictionary.profile.themeTitle}</p>
+                      <p className="text-sm font-medium text-text">{dictionary.account.themeTitle}</p>
                       <ThemeToggleButton className="w-fit" />
                     </div>
                   </div>
@@ -207,13 +229,13 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
             <button
               type="button"
               onClick={() => {
-                signOut();
                 closeMenu();
-                router.replace("/home");
+                // Com biometria ligada, volta ao login mantendo a sessão (AuthContext.leaveSession).
+                void leaveSession().then(() => router.replace("/login"));
               }}
               className="rounded-[var(--radius-lg)] px-3 py-3 text-left text-sm font-medium text-error transition hover:bg-[color:var(--color-surface-strong)]"
             >
-              {dictionary.profile.menuSignOut}
+              {dictionary.account.menuSignOut}
             </button>
           </div>
             </div>,

@@ -1,0 +1,17 @@
+{
+  "badge": "Analytics",
+  "title": "Demo de graficos",
+  "subtitle": "Los tipos de grafico mas usados al estilo shadcn (Recharts), con tokens de tema y adaptacion a escritorio y movil.",
+  "areaTitle": "Area Chart",
+  "areaSubtitle": "Accesos por mes, escritorio y movil apilados.",
+  "barTitle": "Bar Chart",
+  "barSubtitle": "Comparativo de barras por mes.",
+  "lineTitle": "Line Chart",
+  "lineSubtitle": "Tendencia por mes en lineas.",
+  "pieTitle": "Pie Chart",
+  "pieSubtitle": "Distribucion de accesos por canal.",
+  "radialTitle": "Radial Chart",
+  "radialSubtitle": "Canales en barras radiales.",
+  "radarTitle": "Radar Chart",
+  "radarSubtitle": "Volumen por etapa del proceso."
+}

@@ -5,7 +5,7 @@ import HttpBackend from "i18next-http-backend";
 import LanguageDetector from "i18next-browser-languagedetector";
 import { initReactI18next } from "react-i18next";
 
-import { defaultLocale, locales } from "@/lib/i18n/settings";
+import { defaultLocale, enabledLocales } from "@/lib/i18n/settings";
 
 if (!i18n.isInitialized) {
   void i18n
@@ -14,7 +14,7 @@ if (!i18n.isInitialized) {
     .use(initReactI18next)
     .init({
       fallbackLng: defaultLocale,
-      supportedLngs: [...locales],
+      supportedLngs: [...enabledLocales],
       debug: false,
       backend: {
         loadPath: "/locales/{{lng}}/{{lng}}.json",

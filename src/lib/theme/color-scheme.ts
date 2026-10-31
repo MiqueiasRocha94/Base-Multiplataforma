@@ -42,6 +42,22 @@ export type ColorScheme = {
   darkOverrides?: Partial<BrandColors>;
 };
 
+// --- Contrato Brand -> Theme --------------------------------------------------
+
+/**
+ * Canal PÚBLICO de comunicação Brand -> Theme. O domínio Theme trata este
+ * objeto como entrada READ-ONLY e NUNCA lê o estado interno da Brand
+ * (`brand.colors`/`brand.default`). A Brand publica:
+ *  - `brandId`: escopo das customizações e do esquema ativo por marca;
+ *  - `defaultScheme`: o default da WL, já num formato que o Theme sabe aplicar,
+ *    mas que PERTENCE ao domínio da Brand (id `brand:<id>`, `builtin` = não
+ *    editável e não persistido pelo Theme).
+ */
+export type BrandThemeContract = {
+  brandId: string;
+  defaultScheme: ColorScheme;
+};
+
 // --- Areas do shell -----------------------------------------------------------
 
 export type AreaKey = "header" | "footer" | "leftSidebar" | "rightSidebar";
@@ -79,8 +95,22 @@ export type ChartOverride = {
 // --- Estado persistido (o "json") ---------------------------------------------
 
 export type ColorSchemeStore = {
-  activeSchemeId: string;
-  schemes: ColorScheme[];
+  /** Esquemas gerais da aplicação (acessibilidade/inclusão). Ids GLOBAIS. */
+  commons: ColorScheme[];
+  /**
+   * Esquemas do formato ANTIGO (sem vínculo de marca). Somente-leitura,
+   * preservados por compatibilidade até uma migração explícita dos dados.
+   */
+  legacyGlobal: ColorScheme[];
+  /** Customizações POR marca — cada custom pertence à Brand que a criou. */
+  customizations: Record<string, ColorScheme[]>;
+  /**
+   * Esquema ativo POR marca. O `active` é estado do Theme, mas depende da Brand
+   * atual: cada marca resolve o seu (fallback = default da Brand).
+   */
+  activeSchemeIdByBrand: Record<string, string>;
+  /** Active do formato antigo — fallback global de compat (pré-migração). */
+  legacyActiveSchemeId?: string;
   areas: AreaOverrides;
   charts: ChartOverride;
 };
@@ -112,12 +142,13 @@ export const LIGHT_NEUTRALS: Neutrals = {
 };
 
 export const DARK_NEUTRALS: Neutrals = {
-  background: "#0f1714",
-  surface: "#16211d",
-  surfaceStrong: "#20302a",
-  text: "#edf4ef",
-  textMuted: "#b5c6bd",
-  border: "#31443d",
+  // Cinza NEUTRO (sem tinta de hue) — os neutros nao devem herdar a cor da marca.
+  background: "#121212",
+  surface: "#1c1c1c",
+  surfaceStrong: "#2a2a2a",
+  text: "#f2f2f2",
+  textMuted: "#bcbcbc",
+  border: "#383838",
   success: "#54d38f",
   warning: "#ffc94d",
   error: "#ff836e",
@@ -125,13 +156,13 @@ export const DARK_NEUTRALS: Neutrals = {
 
 // --- Presets builtin ----------------------------------------------------------
 
-export const BUILTIN_SCHEMES: ColorScheme[] = [
-  {
-    id: "default",
-    name: "Padrão",
-    builtin: true,
-    light: { primary: "#009c3b", secondary: "#ffdf00", tertiary: "#002776" },
-  },
+/**
+ * Esquemas COMMONS: gerais da aplicação, incluindo acessibilidade/inclusão
+ * (daltonismo, alto contraste). Ids globais, `builtin` (não editáveis nem
+ * removíveis). O antigo builtin "default" foi removido: o default agora é
+ * fornecido pela Brand via `BrandThemeContract`.
+ */
+export const COMMON_SCHEMES: ColorScheme[] = [
   {
     id: "accessible",
     name: "Acessível",
@@ -164,8 +195,10 @@ export const DEFAULT_CHART_OVERRIDE: ChartOverride = {
 };
 
 export const DEFAULT_COLOR_SCHEME_STORE: ColorSchemeStore = {
-  activeSchemeId: "default",
-  schemes: BUILTIN_SCHEMES,
+  commons: COMMON_SCHEMES,
+  legacyGlobal: [],
+  customizations: {},
+  activeSchemeIdByBrand: {},
   areas: DEFAULT_AREA_OVERRIDES,
   charts: DEFAULT_CHART_OVERRIDE,
 };
@@ -334,9 +367,21 @@ const AREA_BRAND_KEY: Record<AreaKey, BrandColorKey> = {
   footer: "primary",
 };
 
-/** Cores efetivas de uma area: personalizadas ou derivadas das marcas do esquema. */
-export function resolveAreaColors(area: AreaOverride, brand: BrandColors, key: AreaKey): AreaColors {
+/**
+ * Cores efetivas de uma area: personalizadas ou derivadas das marcas do esquema.
+ *
+ * Personalizadas seguem o modelo "claro configura, escuro deriva": no tema escuro,
+ * um fundo CLARO (ex.: sidebar/rodape brancos) vira um tom escuro do mesmo matiz
+ * (branco → a superficie do dark), com texto e borda recalculados. Fundos ja
+ * escuros (header marinho, sidebar preta) ficam como configurados.
+ */
+export function resolveAreaColors(area: AreaOverride, brand: BrandColors, key: AreaKey, theme: ResolvedTheme = "light"): AreaColors {
   if (area.custom) {
+    if (theme === "dark" && relativeLuminance(area.colors.background) > 0.5) {
+      const background = toDark(area.colors.background, 0.11);
+      const foreground = readableForeground(background);
+      return { background, foreground, border: mixHex(background, foreground, 0.15) };
+    }
     return area.colors;
   }
   const background = brand[AREA_BRAND_KEY[key]];
@@ -356,8 +401,8 @@ const AREA_VAR_PREFIX: Record<AreaKey, string> = {
 };
 
 /** Monta todas as CSS variables a aplicar no <html> para o tema dado. */
-export function resolveCssVars(store: ColorSchemeStore, theme: ResolvedTheme): Record<string, string> {
-  const scheme = store.schemes.find((entry) => entry.id === store.activeSchemeId) ?? store.schemes[0] ?? BUILTIN_SCHEMES[0];
+export function resolveCssVars(store: ColorSchemeStore, contract: BrandThemeContract, theme: ResolvedTheme): Record<string, string> {
+  const scheme = getActiveScheme(store, contract);
   const brand = resolveBrand(scheme, theme);
   const primaryStrong = derivePrimaryStrong(brand.primary);
   const neutrals = theme === "dark" ? DARK_NEUTRALS : LIGHT_NEUTRALS;
@@ -393,7 +438,7 @@ export function resolveCssVars(store: ColorSchemeStore, theme: ResolvedTheme): R
   };
 
   for (const key of AREA_KEYS) {
-    const colors = resolveAreaColors(store.areas[key], brand, key);
+    const colors = resolveAreaColors(store.areas[key], brand, key, theme);
     const prefix = AREA_VAR_PREFIX[key];
     vars[`${prefix}-background`] = colors.background;
     vars[`${prefix}-foreground`] = colors.foreground;
@@ -405,8 +450,32 @@ export function resolveCssVars(store: ColorSchemeStore, theme: ResolvedTheme): R
 
 // --- Persistencia / migracao --------------------------------------------------
 
-export function getActiveScheme(store: ColorSchemeStore): ColorScheme {
-  return store.schemes.find((entry) => entry.id === store.activeSchemeId) ?? store.schemes[0] ?? BUILTIN_SCHEMES[0];
+/**
+ * Esquemas DISPONÍVEIS para a marca atual, na ordem de exibição:
+ * default da Brand (via contrato) + commons + customizações DA marca.
+ *
+ * O `legacyGlobal` NÃO entra: é apenas dado preservado (compat não-destrutiva)
+ * até uma migração explícita — não deve ser exibido nem vazar entre marcas
+ * (senão o esquema salvo de uma WL apareceria em outra).
+ */
+export function getAvailableSchemes(store: ColorSchemeStore, contract: BrandThemeContract): ColorScheme[] {
+  return [
+    contract.defaultScheme,
+    ...store.commons,
+    ...(store.customizations[contract.brandId] ?? []),
+  ];
+}
+
+/**
+ * Esquema ATIVO resolvido: registro por-marca → default da Brand. O active
+ * pertence ao Theme, mas a escolha depende da Brand atual (a Brand informa o
+ * contexto; o Theme resolve o estado). O `legacyActiveSchemeId` não força o
+ * ativo — cai no default da Brand até a migração explícita.
+ */
+export function getActiveScheme(store: ColorSchemeStore, contract: BrandThemeContract): ColorScheme {
+  const available = getAvailableSchemes(store, contract);
+  const activeId = store.activeSchemeIdByBrand[contract.brandId];
+  return available.find((entry) => entry.id === activeId) ?? contract.defaultScheme;
 }
 
 function isBrand(value: unknown): value is BrandColors {
@@ -414,51 +483,121 @@ function isBrand(value: unknown): value is BrandColors {
   return BRAND_COLOR_KEYS.every((key) => typeof (value as Record<string, unknown>)[key] === "string");
 }
 
-/** Le o store persistido de forma tolerante, garantindo os presets builtin. */
+/** Esquema válido de usuário (id + tríade); ignora o flag `builtin` de origem. */
+function isUserScheme(value: unknown): value is ColorScheme {
+  if (!value || typeof value !== "object") return false;
+  const entry = value as Partial<ColorScheme>;
+  return typeof entry.id === "string" && typeof entry.name === "string" && isBrand(entry.light);
+}
+
+/** Marca um esquema como somente-leitura (legado global, pré-migração). */
+function toReadonly(scheme: ColorScheme): ColorScheme {
+  return { ...scheme, builtin: true };
+}
+
+/** Áreas/charts têm o MESMO parse nos dois formatos (não são tríade de marca). */
+function parseAreas(value: unknown): AreaOverrides {
+  const areas: AreaOverrides = { ...DEFAULT_AREA_OVERRIDES };
+  if (value && typeof value === "object") {
+    for (const key of AREA_KEYS) {
+      const stored = (value as Partial<AreaOverrides>)[key];
+      if (stored && typeof stored.custom === "boolean" && stored.colors) {
+        areas[key] = { custom: stored.custom, colors: { ...DEFAULT_AREA_OVERRIDES[key].colors, ...stored.colors } };
+      }
+    }
+  }
+  return areas;
+}
+
+function parseCharts(value: unknown): ChartOverride {
+  const charts = value as Partial<ChartOverride> | undefined;
+  if (charts && typeof charts.custom === "boolean" && charts.colors) {
+    return { custom: charts.custom, colors: { ...DEFAULT_CHART_OVERRIDE.colors, ...charts.colors } };
+  }
+  return DEFAULT_CHART_OVERRIDE;
+}
+
+/**
+ * Lê o store persistido de forma tolerante. Aceita DOIS formatos, sem migração
+ * destrutiva (ver docs/tema-marca-e-idioma.md):
+ *  - NOVO: `commons`/`customizations`/`activeSchemeIdByBrand` (por marca);
+ *  - LEGADO: `schemes` flat + `activeSchemeId` global → preservados em
+ *    `legacyGlobal` (somente-leitura) + `legacyActiveSchemeId` (fallback).
+ * Os `commons` são sempre garantidos a partir do código (não vêm do disco).
+ */
 export function parseColorSchemeStore(raw: string | null): ColorSchemeStore {
   if (!raw) {
     return DEFAULT_COLOR_SCHEME_STORE;
   }
   try {
-    const parsed = JSON.parse(raw) as Partial<ColorSchemeStore>;
-    const userSchemes = Array.isArray(parsed.schemes)
-      ? parsed.schemes.filter(
-          (entry): entry is ColorScheme =>
-            Boolean(entry) && typeof entry.id === "string" && !entry.builtin && isBrand(entry.light),
-        )
-      : [];
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const areas = parseAreas(parsed.areas);
+    const charts = parseCharts(parsed.charts);
 
-    const schemes = [...BUILTIN_SCHEMES, ...userSchemes];
-    const activeSchemeId = schemes.some((entry) => entry.id === parsed.activeSchemeId)
-      ? (parsed.activeSchemeId as string)
-      : "default";
+    const isNewFormat = parsed.customizations !== undefined || parsed.activeSchemeIdByBrand !== undefined;
 
-    const areas: AreaOverrides = { ...DEFAULT_AREA_OVERRIDES };
-    if (parsed.areas && typeof parsed.areas === "object") {
-      for (const key of AREA_KEYS) {
-        const stored = (parsed.areas as Partial<AreaOverrides>)[key];
-        if (stored && typeof stored.custom === "boolean" && stored.colors) {
-          areas[key] = { custom: stored.custom, colors: { ...DEFAULT_AREA_OVERRIDES[key].colors, ...stored.colors } };
+    if (isNewFormat) {
+      const customizations: Record<string, ColorScheme[]> = {};
+      if (parsed.customizations && typeof parsed.customizations === "object") {
+        for (const [brandId, list] of Object.entries(parsed.customizations as Record<string, unknown>)) {
+          if (Array.isArray(list)) {
+            const valid = list.filter(isUserScheme).map((scheme) => ({ ...scheme, builtin: false }));
+            if (valid.length > 0) {
+              customizations[brandId] = valid;
+            }
+          }
         }
       }
+      const legacyGlobal = Array.isArray(parsed.legacyGlobal)
+        ? (parsed.legacyGlobal as unknown[]).filter(isUserScheme).map(toReadonly)
+        : [];
+      const activeSchemeIdByBrand =
+        parsed.activeSchemeIdByBrand && typeof parsed.activeSchemeIdByBrand === "object"
+          ? { ...(parsed.activeSchemeIdByBrand as Record<string, string>) }
+          : {};
+
+      return {
+        commons: COMMON_SCHEMES,
+        legacyGlobal,
+        customizations,
+        activeSchemeIdByBrand,
+        legacyActiveSchemeId: typeof parsed.legacyActiveSchemeId === "string" ? parsed.legacyActiveSchemeId : undefined,
+        areas,
+        charts,
+      };
     }
 
-    let charts: ChartOverride = DEFAULT_CHART_OVERRIDE;
-    if (parsed.charts && typeof parsed.charts.custom === "boolean" && parsed.charts.colors) {
-      charts = { custom: parsed.charts.custom, colors: { ...DEFAULT_CHART_OVERRIDE.colors, ...parsed.charts.colors } };
-    }
+    // Formato LEGADO: esquemas de usuário viram legado GLOBAL somente-leitura,
+    // vinculados a nenhuma marca (migração explícita para por-marca fica adiada).
+    const legacyGlobal = Array.isArray(parsed.schemes)
+      ? (parsed.schemes as unknown[]).filter(isUserScheme).map(toReadonly)
+      : [];
 
-    return { activeSchemeId, schemes, areas, charts };
+    return {
+      commons: COMMON_SCHEMES,
+      legacyGlobal,
+      customizations: {},
+      activeSchemeIdByBrand: {},
+      legacyActiveSchemeId: typeof parsed.activeSchemeId === "string" ? parsed.activeSchemeId : undefined,
+      areas,
+      charts,
+    };
   } catch {
     return DEFAULT_COLOR_SCHEME_STORE;
   }
 }
 
-/** Serializa apenas o que precisa persistir (esquemas de usuario + ativo + areas + graficos). */
+/**
+ * Serializa o que precisa persistir (formato NOVO). Os `commons` são omitidos
+ * (rehidratados do código); `legacyGlobal`/`legacyActiveSchemeId` são
+ * preservados por compatibilidade até a migração explícita.
+ */
 export function serializeColorSchemeStore(store: ColorSchemeStore): string {
   return JSON.stringify({
-    activeSchemeId: store.activeSchemeId,
-    schemes: store.schemes.filter((entry) => !entry.builtin),
+    customizations: store.customizations,
+    activeSchemeIdByBrand: store.activeSchemeIdByBrand,
+    legacyGlobal: store.legacyGlobal.map((scheme) => ({ ...scheme, builtin: false })),
+    legacyActiveSchemeId: store.legacyActiveSchemeId,
     areas: store.areas,
     charts: store.charts,
   });

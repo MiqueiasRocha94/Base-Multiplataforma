@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { useLanguage } from "@/contexts/LanguageContext";
+import { ScreenTitle } from "@/components/layout/screen-title";
 import { cn } from "@/lib/utils";
 
 export type BreadCrumbMode = "full" | "lite";
@@ -71,24 +72,8 @@ export function BreadCrumb({
   }
 
   if (mode === "lite") {
-    return (
-      <button
-        type="button"
-        onClick={handleLiteClick}
-        // Herda a cor da area onde vive (ex.: --color-header-foreground no
-        // header). O hover e um tom sutil da propria cor, funcionando tanto em
-        // header claro quanto escuro — sem fixar neutros de surface.
-        className={cn(
-          "inline-flex min-w-0 items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-current transition hover:bg-[color:color-mix(in_srgb,currentColor_12%,transparent)]",
-          className,
-        )}
-      >
-        <span aria-hidden="true" className="text-base leading-none">
-          {"<"}
-        </span>
-        <span className="truncate">{currentItem.label}</span>
-      </button>
-    );
+    // Mesmo título/voltar das telas (ScreenTitle): seta ← e cor do header.
+    return <ScreenTitle title={currentItem.label} onBack={handleLiteClick} className={className} />;
   }
 
   return (

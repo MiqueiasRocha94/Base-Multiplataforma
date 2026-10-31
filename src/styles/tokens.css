@@ -1,6 +1,6 @@
 :root,
 html[data-theme="light"] {
-  --font-manrope: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-manrope: var(--font-manrope-web), "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --font-geist-mono: "Cascadia Mono", "Consolas", "SFMono-Regular", monospace;
   --font-scale: 1;
   --color-primary: #004512;
@@ -51,6 +51,9 @@ html[data-theme="light"] {
   --shadow-soft: 0 24px 60px rgba(15, 95, 75, 0.12);
   --radius-xl: 1.5rem;
   --radius-2xl: 2rem;
+  /* Altura da barra do topo do MainContent (py-3 + botao size-9 + borda),
+     compartilhada com o cabecalho da sidebar para as bordas alinharem. */
+  --layout-content-top-height: calc(3.75rem + 1px);
 }
 
 html[data-theme="dark"] {
@@ -64,12 +67,12 @@ html[data-theme="dark"] {
   --color-on-tertiary: #141a17;
   --color-on-success: #141a17;
   --color-on-error: #141a17;
-  --color-background: #0f1714;
-  --color-surface: #16211d;
-  --color-surface-strong: #20302a;
-  --color-text: #edf4ef;
-  --color-text-muted: #b5c6bd;
-  --color-border: #31443d;
+  --color-background: #121212;
+  --color-surface: #1c1c1c;
+  --color-surface-strong: #2a2a2a;
+  --color-text: #f2f2f2;
+  --color-text-muted: #bcbcbc;
+  --color-border: #383838;
   --color-success: #54d38f;
   --color-warning: #ffc94d;
   --color-on-warning: #141a17;
@@ -94,12 +97,12 @@ html[data-theme="dark"] {
     --color-on-tertiary: #141a17;
     --color-on-success: #141a17;
     --color-on-error: #141a17;
-    --color-background: #0f1714;
-    --color-surface: #16211d;
-    --color-surface-strong: #20302a;
-    --color-text: #edf4ef;
-    --color-text-muted: #b5c6bd;
-    --color-border: #31443d;
+    --color-background: #121212;
+    --color-surface: #1c1c1c;
+    --color-surface-strong: #2a2a2a;
+    --color-text: #f2f2f2;
+    --color-text-muted: #bcbcbc;
+    --color-border: #383838;
     --color-success: #54d38f;
     --color-warning: #ffc94d;
     --color-on-warning: #141a17;
@@ -153,10 +156,16 @@ html[data-radius="none"] {
 
 /* A escala (--font-scale) é definida pelo ThemeProvider combinando o preset com
    o ratio do usuário (Tamanho da fonte). Os presets controlam só a família. */
-html[data-font="reading"] {
-  --font-manrope: Georgia, "Times New Roman", serif;
+/* Manrope (webfont self-hosted) — fonte padrão, idêntica em todo dispositivo. */
+html[data-font="manrope"] {
+  --font-manrope: var(--font-manrope-web), "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
-html[data-font="compact"] {
-  --font-manrope: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+/* Fonte do próprio dispositivo/SO (adapta por plataforma: San Francisco, Roboto…). */
+html[data-font="system"] {
+  --font-manrope: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+html[data-font="reading"] {
+  --font-manrope: Georgia, "Times New Roman", serif;
 }

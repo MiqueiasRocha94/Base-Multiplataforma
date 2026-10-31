@@ -67,7 +67,7 @@ export function SelectOverlay({
 
   return (
     <div className="fixed inset-0 z-[1200] flex flex-col bg-[color:var(--color-background)]">
-      <div className="flex items-center justify-between gap-3 bg-primary px-4 py-3 text-white pt-[max(env(safe-area-inset-top),0.75rem)]">
+      <div className="flex items-center justify-between gap-3 bg-primary px-4 py-3 text-white pt-[max(var(--app-safe-top),0.75rem)]">
         <span className="min-w-0 truncate text-base font-medium">{title ?? labels.title}</span>
         <button type="button" onClick={onClose} className="shrink-0 text-sm font-semibold">
           {labels.close}
@@ -107,7 +107,7 @@ export function SelectOverlay({
         )}
       </div>
 
-      <div className="grid gap-2 border-t border-border bg-[color:var(--color-background)] p-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
+      <div className="grid gap-2 border-t border-border bg-[color:var(--color-background)] p-3 pb-[max(var(--app-safe-bottom),0.75rem)]">
         <div className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3">
           <LucideSearch className="size-4 text-text-muted" />
           <input

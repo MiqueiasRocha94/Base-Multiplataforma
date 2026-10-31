@@ -25,7 +25,11 @@ export type FieldType =
   | "date"
   | "datetime"
   | "enum"
-  | "relation";
+  | "relation"
+  /** Um arquivo (`FileItem`) no corpo da entidade → foto no formulário. */
+  | "file"
+  /** Lista de arquivos (`FileItem[]`) → galeria no formulário. */
+  | "files";
 
 /** Relacionamento com outra entidade (para selects dirigidos por dados). */
 export type FieldRelationship = {
@@ -91,13 +95,34 @@ export type ModuleUiActions = {
   export?: boolean;
 };
 
+/**
+ * Coluna da listagem declarada pelo backend:
+ * - `visible`: aparece por padrão (`false` = oferecida no seletor "Colunas", oculta);
+ * - `additional`: a API só devolve o campo quando pedido — ao o usuário exibir a
+ *   coluna, o front pede `addColumn=<field>` no GET da lista.
+ */
+export type UiColumn = { field: string; visible?: boolean; additional?: boolean };
+
 export type ModuleUi = {
-  /** Campos exibidos como colunas da listagem. */
-  columns: string[];
+  /**
+   * Colunas da listagem. Formato preferido: `UiColumn[]` (visível/oculta/adicional
+   * por coluna). `string` = visível por padrão (formato anterior, compatível).
+   */
+  columns: (string | UiColumn)[];
   /** Campos pesquisaveis (filtros). */
   filters: string[];
   /** Ordenacao padrao. */
   sort?: { field: string; direction: UiSortDirection };
+  /**
+   * Campos que a API aceita em `sort` (ordenacao no servidor). Ausente: so o
+   * `sort.field` padrao. A lista ordenada localmente (veio inteira) nao depende disto.
+   */
+  sortable?: string[];
+  /**
+   * Filtros que precisam estar preenchidos antes do 1º GET da lista (ex.: um perfil só
+   * consulta um registro por vez). Sem eles a API responde 400; a lista espera.
+   */
+  requiredFilters?: string[];
   actions: ModuleUiActions;
 };
 

@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-restricted-imports -- D04 (desvio conhecido): log de mock em core; some com a injeção do provider de dados
 import { logMockApi } from "@/lib/mock-collection";
 import type { FieldRelationship } from "@/core/contracts";
 import type { DynamicSelectOption } from "@/types/dynamic-form";

@@ -1,6 +1,5 @@
 "use client";
 
-import { useDevice } from "@/contexts/DeviceContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAnalytics } from "@/hooks/use-analytics";
 
@@ -14,16 +13,14 @@ import { TrafficLineChart } from "./traffic-line-chart";
 
 export function AnalyticsDemo() {
   const { dictionary } = useLanguage();
-  const { view } = useDevice();
-  const isMobile = view === "mobile";
   const t = dictionary.analytics;
   const data = useAnalytics();
 
   return (
-    <section className={isMobile ? "grid gap-4 px-4 py-4" : "grid gap-6 py-8"}>
+    <section className="grid gap-6 py-8 mobile:gap-4 mobile:px-4 mobile:py-4">
       <div className="grid gap-1">
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">{t.badge}</p>
-        <h1 className={isMobile ? "text-2xl font-extrabold text-text" : "text-3xl font-semibold tracking-tight text-text"}>{t.title}</h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-text mobile:text-2xl mobile:font-extrabold mobile:tracking-normal">{t.title}</h1>
         <p className="text-sm leading-6 text-text-muted">{t.subtitle}</p>
       </div>
 

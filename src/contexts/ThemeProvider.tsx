@@ -2,7 +2,9 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
+import { useBrand } from "@/contexts/BrandContext";
 import { systemConfig } from "@/lib/config/system-config";
+import { getStorageItem, setStorageItem, storageKeys } from "@/lib/platform/storage";
 import {
   type AreaColors,
   type AreaKey,
@@ -15,12 +17,13 @@ import {
   DEFAULT_AREA_OVERRIDES,
   derivePrimaryStrong,
   getActiveScheme,
+  getAvailableSchemes,
   resolveBrand,
   resolveCssVars,
 } from "@/lib/theme/color-scheme";
 
 export type AppTheme = "system" | "light" | "dark";
-export type FontPreset = "system" | "reading" | "compact";
+export type FontPreset = "manrope" | "system" | "reading";
 // Arredondamento global: "default" (Moderado) usa os raios do tema, "high"
 // (Alto) aumenta, "light" (Leve) reduz e "none" (Sem) zera.
 export type RadiusPreset = "high" | "default" | "light" | "none";
@@ -28,14 +31,16 @@ export type { ResolvedTheme, BrandColorKey, AreaKey, AreaColors, ChartColorKey, 
 
 // Escala de fonte (acessibilidade) — aplicada como `--font-scale` no <html>.
 export const FONT_SCALE_MIN = 0.8;
-export const FONT_SCALE_MAX = 1.6;
+export const FONT_SCALE_MAX = 2;
 export const FONT_SCALE_STEP = 0.05;
 export const FONT_SCALE_DEFAULT = 1;
 
+// Presets controlam só a FAMÍLIA; o TAMANHO vem exclusivamente do slider
+// (`fontScale`), pra ser um único controle claro. Por isso todos = 1.
 const FONT_PRESET_SCALE: Record<FontPreset, number> = {
+  manrope: 1,
   system: 1,
-  reading: 1.05,
-  compact: 0.96,
+  reading: 1,
 };
 
 type ThemeContextValue = {
@@ -81,17 +86,46 @@ function clampFontScale(value: number): number {
   return Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, Math.round(value * 100) / 100));
 }
 
+/** Lê uma preferência do storage validando contra os valores permitidos. */
+function readStoredPref<T extends string>(key: string, fallback: T, allowed: readonly T[]): T {
+  const value = getStorageItem(key);
+  return value && (allowed as readonly string[]).includes(value) ? (value as T) : fallback;
+}
+
+/** Lê a escala de fonte do storage (número positivo) com fallback. */
+function readStoredScale(fallback: number): number {
+  const value = Number(getStorageItem(storageKeys.fontScale));
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Fonte unica: a config estatica (src/config/system-config.json). O
-  // localStorage nao e usado para estas configuracoes — o arquivo sempre vence.
-  const [theme, setTheme] = useState<AppTheme>(systemConfig.theme);
-  const [fontPreset, setFontPreset] = useState<FontPreset>(systemConfig.fontPreset);
-  const [fontScale, setFontScaleState] = useState<number>(systemConfig.fontScale);
-  const [radiusPreset, setRadiusPreset] = useState<RadiusPreset>(systemConfig.radiusPreset);
+  // Config estatica (system-config.json) e o DEFAULT; as PREFERENCIAS do usuario
+  // (tema, fonte, arredondamento) sao persistidas em localStorage e sobrepoem o
+  // default — assim uma troca no painel sobrevive ao reload. As CORES nao entram
+  // aqui: seguem a marca (BrandContext). Inicializador lazy = SSR usa o default
+  // (getStorageItem devolve null no server) e o cliente le o storage sem
+  // divergencia de hidratacao (o JSX nao depende do tema — ele vira CSS/dataset).
+  const [theme, setTheme] = useState<AppTheme>(() =>
+    readStoredPref(storageKeys.theme, systemConfig.theme, ["system", "light", "dark"] as const),
+  );
+  const [fontPreset, setFontPreset] = useState<FontPreset>(() =>
+    readStoredPref(storageKeys.fontPreset, systemConfig.fontPreset, ["manrope", "system", "reading"] as const),
+  );
+  const [fontScale, setFontScaleState] = useState<number>(() => readStoredScale(systemConfig.fontScale));
+  const [radiusPreset, setRadiusPreset] = useState<RadiusPreset>(() =>
+    readStoredPref(storageKeys.radiusPreset, systemConfig.radiusPreset, ["high", "default", "light", "none"] as const),
+  );
   const [store, setStore] = useState<ColorSchemeStore>(systemConfig.colorScheme);
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light");
 
-  const activeScheme = useMemo(() => getActiveScheme(store), [store]);
+  // Comunicação Brand -> Theme via CONTRATO público (nunca lê `brand.colors` nem
+  // o estado interno da Brand). A Brand informa a marca ativa + o seu default
+  // encapsulado; o Theme resolve o PRÓPRIO domínio: esquemas disponíveis, ativo
+  // por marca e aplicação dos tokens. Ver docs/tema-marca-e-idioma.md (Marca / Esquema de cores).
+  const { themeContract } = useBrand();
+
+  const schemes = useMemo(() => getAvailableSchemes(store, themeContract), [store, themeContract]);
+  const activeScheme = useMemo(() => getActiveScheme(store, themeContract), [store, themeContract]);
   const activeSchemeEditable = !activeScheme.builtin;
 
   useEffect(() => {
@@ -105,83 +139,125 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (theme === "system") {
       delete document.documentElement.dataset.theme;
-      return;
+    } else {
+      document.documentElement.dataset.theme = theme;
     }
-    document.documentElement.dataset.theme = theme;
+    setStorageItem(storageKeys.theme, theme);
   }, [theme]);
 
   useEffect(() => {
     document.documentElement.dataset.font = fontPreset;
+    setStorageItem(storageKeys.fontPreset, fontPreset);
   }, [fontPreset]);
 
   useEffect(() => {
     const effective = Math.round(FONT_PRESET_SCALE[fontPreset] * fontScale * 100) / 100;
     document.documentElement.style.setProperty("--font-scale", String(effective));
+    setStorageItem(storageKeys.fontScale, String(fontScale));
   }, [fontScale, fontPreset]);
 
   useEffect(() => {
     if (radiusPreset === "default") {
       delete document.documentElement.dataset.radius;
-      return;
+    } else {
+      document.documentElement.dataset.radius = radiusPreset;
     }
-    document.documentElement.dataset.radius = radiusPreset;
+    setStorageItem(storageKeys.radiusPreset, radiusPreset);
   }, [radiusPreset]);
 
-  // Aplica as CSS variables do esquema + areas para o tema resolvido.
+  // Aplica as CSS variables do esquema + areas para o tema resolvido. O tema
+  // efetivo é calculado AQUI (não só de `resolvedTheme`): no primeiro efeito o
+  // estado ainda é o "light" inicial e aplicaria as cores claras por um quadro
+  // no tema escuro, desfazendo o bootstrap pré-pintura (lib/theme/theme-bootstrap).
   useEffect(() => {
-    const vars = resolveCssVars(store, resolvedTheme);
+    const effective: ResolvedTheme =
+      theme === "system" ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : theme;
+    const vars = resolveCssVars(store, themeContract, effective);
     for (const [name, value] of Object.entries(vars)) {
       document.documentElement.style.setProperty(name, value);
     }
-  }, [store, resolvedTheme]);
+  }, [store, themeContract, theme, resolvedTheme]);
 
+  // As mutações de esquema pertencem ao Theme, mas são ESCOPADAS pela marca
+  // atual: o active é gravado por marca e as customizações vivem sob o brandId
+  // (nunca vazam entre WLs). Default da Brand e commons são builtin (read-only).
   const setActiveScheme = useCallback((id: string) => {
-    setStore((current) => (current.schemes.some((s) => s.id === id) ? { ...current, activeSchemeId: id } : current));
-  }, []);
+    const brandId = themeContract.brandId;
+    setStore((current) =>
+      getAvailableSchemes(current, themeContract).some((s) => s.id === id)
+        ? { ...current, activeSchemeIdByBrand: { ...current.activeSchemeIdByBrand, [brandId]: id } }
+        : current,
+    );
+  }, [themeContract]);
 
   const addScheme = useCallback((name?: string) => {
     const id = `scheme-${Date.now().toString(36)}`;
+    const brandId = themeContract.brandId;
     setStore((current) => {
-      const base = getActiveScheme(current);
+      const base = getActiveScheme(current, themeContract);
       const scheme: ColorScheme = { id, name: name?.trim() || "Novo esquema", builtin: false, light: { ...base.light } };
-      return { ...current, schemes: [...current.schemes, scheme], activeSchemeId: id };
+      const list = current.customizations[brandId] ?? [];
+      return {
+        ...current,
+        customizations: { ...current.customizations, [brandId]: [...list, scheme] },
+        activeSchemeIdByBrand: { ...current.activeSchemeIdByBrand, [brandId]: id },
+      };
     });
     return id;
-  }, []);
+  }, [themeContract]);
 
   const renameScheme = useCallback((id: string, name: string) => {
-    setStore((current) => ({
-      ...current,
-      schemes: current.schemes.map((s) => (s.id === id && !s.builtin ? { ...s, name } : s)),
-    }));
-  }, []);
+    const brandId = themeContract.brandId;
+    setStore((current) => {
+      const list = current.customizations[brandId] ?? [];
+      return {
+        ...current,
+        customizations: {
+          ...current.customizations,
+          [brandId]: list.map((s) => (s.id === id ? { ...s, name } : s)),
+        },
+      };
+    });
+  }, [themeContract]);
 
   const deleteScheme = useCallback((id: string) => {
+    const brandId = themeContract.brandId;
     setStore((current) => {
-      const target = current.schemes.find((s) => s.id === id);
-      if (!target || target.builtin) {
+      const list = current.customizations[brandId] ?? [];
+      if (!list.some((s) => s.id === id)) {
         return current;
       }
-      const schemes = current.schemes.filter((s) => s.id !== id);
-      const activeSchemeId = current.activeSchemeId === id ? "default" : current.activeSchemeId;
-      return { ...current, schemes, activeSchemeId };
-    });
-  }, []);
-
-  const updateBrandColor = useCallback((key: BrandColorKey, value: string) => {
-    setStore((current) => {
-      const active = getActiveScheme(current);
-      if (active.builtin) {
-        return current;
+      // Se o excluído era o ativo, remove o registro da marca -> fallback resolve
+      // para o legado/default da Brand em getActiveScheme.
+      const activeSchemeIdByBrand = { ...current.activeSchemeIdByBrand };
+      if (activeSchemeIdByBrand[brandId] === id) {
+        delete activeSchemeIdByBrand[brandId];
       }
       return {
         ...current,
-        schemes: current.schemes.map((s) =>
-          s.id === active.id ? { ...s, light: { ...s.light, [key]: value } } : s,
-        ),
+        customizations: { ...current.customizations, [brandId]: list.filter((s) => s.id !== id) },
+        activeSchemeIdByBrand,
       };
     });
-  }, []);
+  }, [themeContract]);
+
+  const updateBrandColor = useCallback((key: BrandColorKey, value: string) => {
+    const brandId = themeContract.brandId;
+    setStore((current) => {
+      const active = getActiveScheme(current, themeContract);
+      if (active.builtin) {
+        return current; // default da Brand, commons e legado não são editáveis.
+      }
+      const list = current.customizations[brandId] ?? [];
+      return {
+        ...current,
+        customizations: {
+          ...current.customizations,
+          [brandId]: list.map((s) => (s.id === active.id ? { ...s, light: { ...s.light, [key]: value } } : s)),
+        },
+      };
+    });
+  }, [themeContract]);
 
   const setAreaCustom = useCallback((area: AreaKey, custom: boolean) => {
     setStore((current) => ({
@@ -227,7 +303,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setFontScale,
       radiusPreset,
       setRadiusPreset,
-      schemes: store.schemes,
+      schemes,
       activeScheme,
       setActiveScheme,
       addScheme,
@@ -256,6 +332,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setActiveScheme,
       setAreaCustom,
       setChartsCustom,
+      schemes,
       setFontScale,
       store,
       theme,

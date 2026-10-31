@@ -4,6 +4,9 @@ export type DynamicFormType = string;
 
 export type FieldKind = "text" | "email" | "phone" | "number" | "password" | "switch" | "select";
 
+// Icone opcional exibido a esquerda do campo (login e telas de credencial).
+export type DynamicFieldIcon = "user" | "lock" | "mail" | "phone";
+
 // Inclui `string[]` para suportar campos `select` de multipla escolha.
 export type FormValue = string | number | boolean | null | undefined | string[];
 
@@ -22,10 +25,13 @@ export type DynamicFormField = {
   mask?: string;
   // Opcoes embutidas para selects dirigidos por dados.
   options?: DynamicSelectOption[];
+  // Icone a esquerda do input (kinds de texto/senha). Ignorado por switch/select.
+  icon?: DynamicFieldIcon;
 };
 
 export type DynamicFormValues = Record<string, FormValue>;
 
+// eslint-disable-next-line no-restricted-syntax -- D06 (desvio conhecido): valor de runtime em types/; corrige movendo para lib/
 export function emptyDynamicFormValues(): DynamicFormValues {
   return {};
 }

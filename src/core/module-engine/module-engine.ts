@@ -1,6 +1,8 @@
 import { z } from "zod";
 
+// eslint-disable-next-line no-restricted-imports -- D03 (desvio conhecido): tipos de view usados pela engine; corrige movendo-os para types/
 import type { FilterField } from "@/components/ui/filter-modal";
+// eslint-disable-next-line no-restricted-imports -- D03 (desvio conhecido): tipos de view usados pela engine; corrige movendo-os para types/
 import type { GenericTableColumn, RowStatus } from "@/components/ui/generic-table";
 import type { DynamicFormField, DynamicFormValues, FieldKind } from "@/types/dynamic-form";
 import type {
@@ -21,12 +23,40 @@ function fieldMap(schema: EntitySchema): Map<string, EntityField> {
   return new Map(schema.fields.map((field) => [field.name, field]));
 }
 
+/**
+ * Campo de arquivo (`file` = foto, `files` = galeria): vive fora do
+ * `DynamicForm`, da tabela, dos filtros e do CSV — o formulario o exibe como
+ * imagem (`fileFields`).
+ */
+export function isFileField(field: EntityField): boolean {
+  return field.type === "file" || field.type === "files";
+}
+
+/** Campos de arquivo exibiveis do schema, na ordem do contrato. */
+export function fileFields(schema: EntitySchema): EntityField[] {
+  return schema.fields.filter((field) => isFileField(field) && !field.hidden);
+}
+
 /** Rotulo amigavel do campo (cai no proprio `name` quando ausente). */
 export function fieldLabel(field: EntityField): string {
   return field.label ?? field.name;
 }
 
-/** Texto exibido de um valor: usa `enum` (incl. booleanos rotulados) quando houver. */
+const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+// `mask: "percent"`: o valor já vem em percentual (1.75 → "1,75%").
+const percent = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+
+/** Timestamp (ms) de um valor de data: numero ou texto ISO (`yyyy-MM-dd…`). */
+function dateMs(value: unknown): number {
+  if (typeof value === "number") return value;
+  return typeof value === "string" ? Date.parse(value) : Number.NaN;
+}
+
+/**
+ * Texto exibido de um valor: usa `enum` (incl. booleanos rotulados) quando houver.
+ * Exibicao por tipo/mascara do contrato: `mask: "currency"` → R$, `"percent"` → %; data ISO →
+ * dd/mm/aaaa (pelo texto, sem fuso: `2026-01-01` nao vira 31/12).
+ */
 export function displayValue(record: ModuleRecord, field: EntityField): string {
   const value = record[field.name];
   if (field.enum && field.enum.length > 0) {
@@ -35,10 +65,27 @@ export function displayValue(record: ModuleRecord, field: EntityField): string {
   }
   if (field.type === "boolean") return value ? "Sim" : "Nao";
   if (value == null) return "";
-  if ((field.type === "date" || field.type === "datetime") && typeof value === "number") {
-    return new Date(value).toLocaleDateString();
+  if (field.mask === "currency" && typeof value === "number") {
+    return currency.format(value);
+  }
+  if (field.mask === "percent" && typeof value === "number") {
+    return `${percent.format(value)}%`;
+  }
+  if (field.type === "date" || field.type === "datetime") {
+    if (typeof value === "number") return new Date(value).toLocaleDateString("pt-BR");
+    const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value));
+    if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
   }
   return String(value);
+}
+
+/** Extrai o timestamp do 1º campo de data do schema (filtro basico de Data). */
+export function buildDateOf(schema: EntitySchema): ((record: ModuleRecord) => number) | undefined {
+  const dateField = schema.fields.find((field) => field.type === "date" || field.type === "datetime");
+  if (!dateField) {
+    return undefined;
+  }
+  return (record) => dateMs(record[dateField.name]) || 0;
 }
 
 /** Chave primaria (id) de um registro como string. */
@@ -58,37 +105,98 @@ function columnMobileRole(field: EntityField): GenericTableColumn<ModuleRecord>[
   return "field";
 }
 
-/** Gera as colunas da tabela (web) / campos do card (mobile) a partir de `ui.columns` + `schema`. */
-export function buildTableColumns(ui: ModuleUi, schema: EntitySchema): GenericTableColumn<ModuleRecord>[] {
+const isNumeric = (field: EntityField) => field.type === "integer" || field.type === "number" || field.type === "decimal";
+
+/**
+ * Apresentacao da coluna derivada do tipo (sem configuracao por entidade):
+ * numero alinha a direita; data nao quebra; toda coluna ordena pelo nome do campo
+ * (o backend valida o `sort`) e, localmente, pelo valor bruto — enum pelo rotulo.
+ */
+function columnOf(field: EntityField): Omit<GenericTableColumn<ModuleRecord>, "mobileRole" | "mobileLabel"> {
+  const date = field.type === "date" || field.type === "datetime";
+  return {
+    key: field.name,
+    header: fieldLabel(field),
+    render: (record) => displayValue(record, field),
+    className: isNumeric(field) ? "text-right" : date ? "whitespace-nowrap" : undefined,
+    headerClassName: isNumeric(field) ? "text-right" : undefined,
+    sortKey: field.name,
+    sortValue: (record) => {
+      const value = record[field.name];
+      if (field.enum?.length) return displayValue(record, field);
+      if (date) return dateMs(value);
+      return typeof value === "number" || typeof value === "string" ? value : null;
+    },
+  };
+}
+
+/**
+ * Campos que a API aceita em `sort`: `ui.sortable` + o `ui.sort.field` padrao
+ * (que o proprio backend usa). O front nao deduz — campo fora daqui da 400.
+ */
+export function serverSortableFields(ui: ModuleUi): Set<string> {
+  return new Set([...(ui.sortable ?? []), ...(ui.sort ? [ui.sort.field] : [])]);
+}
+
+/** Coluna do contrato normalizada (`string` antigo = visivel, nao adicional). */
+export type NormalizedColumn = { field: string; visible: boolean; additional: boolean; explicit: boolean };
+
+/**
+ * `ui.columns` nos dois formatos → lista uniforme. `explicit` = veio como objeto:
+ * o backend ofereceu a coluna de proposito (vale ate para campo `hidden` do schema,
+ * ex.: `id` oculto por padrao).
+ */
+export function normalizeColumns(ui: ModuleUi): NormalizedColumn[] {
+  return ui.columns.map((column) =>
+    typeof column === "string"
+      ? { field: column, visible: true, additional: false, explicit: false }
+      : { field: column.field, visible: column.visible !== false, additional: column.additional === true, explicit: true },
+  );
+}
+
+/**
+ * Gera as colunas da tabela (web) / campos do card (mobile) a partir de `ui.columns` + `schema`.
+ * Coluna `visible: false` entra oculta (o usuario a exibe pelo seletor "Colunas";
+ * no card mobile nao aparece); `additional` marca as que a API so devolve sob pedido.
+ * `serverSort`: ordenacao feita pela API — so as colunas que ela aceita ficam
+ * ordenaveis; sem ele (lista local), todas.
+ */
+export function buildTableColumns(
+  ui: ModuleUi,
+  schema: EntitySchema,
+  options: { serverSort?: boolean } = {},
+): GenericTableColumn<ModuleRecord>[] {
   const byName = fieldMap(schema);
   const pk = schema.primaryKey;
   const titleField = schema.fields.find(
     (field) => !field.hidden && field.name !== pk && (field.type === "string" || field.type === "text"),
   );
+  const accepted = options.serverSort ? serverSortableFields(ui) : null;
+  const sortableOf = (column: GenericTableColumn<ModuleRecord>) =>
+    accepted && !accepted.has(column.key) ? { ...column, sortKey: undefined, sortValue: undefined } : column;
 
   const columns: GenericTableColumn<ModuleRecord>[] = [];
 
   if (titleField) {
-    columns.push({
-      key: titleField.name,
-      header: fieldLabel(titleField),
-      mobileRole: "title",
-      render: (record) => displayValue(record, titleField),
-    });
+    columns.push(sortableOf({ ...columnOf(titleField), className: "font-semibold", mobileRole: "title" }));
   }
 
-  for (const name of ui.columns) {
+  for (const { field: name, visible, additional, explicit } of normalizeColumns(ui)) {
     const field = byName.get(name);
-    if (!field || field.hidden || field.name === titleField?.name) {
+    if (!field || (field.hidden && !explicit) || field.name === titleField?.name || isFileField(field)) {
       continue;
     }
-    columns.push({
-      key: field.name,
-      header: fieldLabel(field),
-      mobileLabel: fieldLabel(field),
-      mobileRole: columnMobileRole(field),
-      render: (record) => displayValue(record, field),
-    });
+    columns.push(
+      sortableOf({
+        ...columnOf(field),
+        mobileLabel: fieldLabel(field),
+        mobileRole: columnMobileRole(field),
+        defaultHidden: !visible,
+        additional,
+        // Card mobile nao tem seletor de colunas: so as visiveis por padrao.
+        hideOnMobile: !visible,
+      }),
+    );
   }
 
   return columns;
@@ -112,7 +220,7 @@ export function buildFilterFields(ui: ModuleUi, schema: EntitySchema): FilterFie
   const byName = fieldMap(schema);
   return ui.filters
     .map((name) => byName.get(name))
-    .filter((field): field is EntityField => field != null && !field.hidden)
+    .filter((field): field is EntityField => field != null && !field.hidden && !isFileField(field))
     .map((field) => {
       // Enum/boolean filtram por igualdade sobre o LABEL exibido (displayValue),
       // por isso a opcao usa o proprio label como id.
@@ -164,6 +272,30 @@ export function buildPredicate(schema: EntitySchema, ui: ModuleUi) {
   };
 }
 
+/**
+ * Valores aplicados no filtro → parametros da API (modo servidor). O filtro guarda
+ * o ROTULO dos selects; a API recebe o VALOR (codigo do enum, `true`/`false`).
+ * Campos vazios ficam de fora.
+ */
+export function buildQueryFilters(values: Record<string, string>, schema: EntitySchema, ui: ModuleUi): Record<string, string> {
+  const byName = fieldMap(schema);
+  const filters: Record<string, string> = {};
+  for (const name of ui.filters) {
+    const raw = (values[name] ?? "").trim();
+    const field = byName.get(name);
+    if (!raw || !field) continue;
+    if (field.enum?.length) {
+      const option = field.enum.find((entry) => entry.label === raw);
+      filters[name] = String(option ? option.value : raw);
+    } else if (field.type === "boolean") {
+      filters[name] = String(raw === "Sim");
+    } else {
+      filters[name] = raw;
+    }
+  }
+  return filters;
+}
+
 // ---- formulario -----------------------------------------------------------
 
 function toFormKind(field: EntityField): FieldKind {
@@ -187,12 +319,12 @@ function toFormKind(field: EntityField): FieldKind {
 }
 
 /**
- * Gera os campos do formulario a partir do `schema`. Oculta a chave primaria e
- * campos `hidden`; enum (nao-boolean) vira select com opcoes.
+ * Gera os campos do formulario a partir do `schema`. Oculta a chave primaria,
+ * campos `hidden` e de arquivo (`fileFields`); enum (nao-boolean) vira select com opcoes.
  */
 export function buildFormFields(schema: EntitySchema): DynamicFormField[] {
   return schema.fields
-    .filter((field) => !field.hidden && field.name !== schema.primaryKey)
+    .filter((field) => !field.hidden && field.name !== schema.primaryKey && !isFileField(field))
     .map((field) => ({
       key: field.name,
       label: fieldLabel(field),
@@ -221,7 +353,7 @@ function isLabeledSelect(field: EntityField): boolean {
 export function recordToFormValues(record: ModuleRecord | null, schema: EntitySchema): DynamicFormValues {
   const values: DynamicFormValues = {};
   for (const field of schema.fields) {
-    if (field.hidden || field.name === schema.primaryKey) {
+    if (field.hidden || field.name === schema.primaryKey || isFileField(field)) {
       continue;
     }
     const raw = record ? record[field.name] : field.default;
@@ -245,7 +377,7 @@ export function recordToFormValues(record: ModuleRecord | null, schema: EntitySc
 export function formValuesToRecord(values: DynamicFormValues, schema: EntitySchema): ModuleRecord {
   const out: ModuleRecord = {};
   for (const field of schema.fields) {
-    if (field.hidden || field.readOnly || field.name === schema.primaryKey) {
+    if (field.hidden || field.readOnly || field.name === schema.primaryKey || isFileField(field)) {
       continue;
     }
     const value = values[field.name];
@@ -314,7 +446,7 @@ function fieldToZod(field: EntityField): z.ZodTypeAny {
 export function buildZodSchema(schema: EntitySchema): z.ZodType {
   const shape: Record<string, z.ZodTypeAny> = {};
   for (const field of schema.fields) {
-    if (field.hidden || field.readOnly || field.name === schema.primaryKey) {
+    if (field.hidden || field.readOnly || field.name === schema.primaryKey || isFileField(field)) {
       continue;
     }
     shape[field.name] = fieldToZod(field);
@@ -328,12 +460,13 @@ function csvCell(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
 
-/** Gera CSV a partir de `ui.columns` + `schema` (chave primaria + colunas). */
+/** Gera CSV a partir de `ui.columns` (as visiveis por padrao) + `schema` (chave primaria + colunas). */
 export function buildCsv(records: ModuleRecord[], ui: ModuleUi, schema: EntitySchema): string {
   const byName = fieldMap(schema);
-  const columns = ui.columns
-    .map((name) => byName.get(name))
-    .filter((field): field is EntityField => field != null);
+  const columns = normalizeColumns(ui)
+    .filter((column) => column.visible && column.field !== schema.primaryKey)
+    .map((column) => byName.get(column.field))
+    .filter((field): field is EntityField => field != null && !isFileField(field));
 
   const header = [schema.primaryKey, ...columns.map(fieldLabel)];
   const rows = records.map((record) => [

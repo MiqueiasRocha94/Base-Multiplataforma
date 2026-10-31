@@ -2,7 +2,7 @@
 
 import { LucidePlus, LucideTrash2 } from "lucide-react";
 
-import { useImageCapture } from "@/components/ui/use-image-capture";
+import { useImageCapture } from "@/hooks/use-image-capture";
 import type { FileItem } from "@/types/file-item";
 
 export type ImageGalleryLabels = {

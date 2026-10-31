@@ -1,6 +1,30 @@
 @import "tailwindcss";
 @import "../styles/tokens.css";
 
+/* ─── Apresentação por DEVICE: fonte única ──────────────────────────────────
+   A view é decidida pelo DeviceContext e publicada em `<html data-view>`. Tudo
+   que muda só a APARÊNCIA por device sai daqui — nunca de `isMobile ? "..." :`
+   nos componentes (JS por device fica só para diferença de ESTRUTURA).
+
+   Opt-in: só age no elemento que usa a variante; sem ela vale o estilo da
+   página. Ex.: `className="max-w-2xl px-4 desktop:lg:max-w-4xl"`.
+   Duas views (o tablet alterna pela orientação). Tamanho fino dentro de uma
+   view usa os breakpoints normais do Tailwind (`sm:`, `lg:`).
+
+   `wide:` = view mobile com largura ≥ 768px (tablet em retrato, janela
+   estreita): mesma ESTRUTURA do mobile, mas aproveita a largura (2 colunas,
+   mais respiro, sheets centralizados). Declarada DEPOIS de `mobile:` para
+   vencê-la quando as duas se aplicam. */
+@custom-variant mobile (&:where([data-view="mobile"] *));
+@custom-variant desktop (&:where([data-view="desktop"] *));
+@custom-variant wide {
+  &:where([data-view="mobile"] *) {
+    @media (width >= 48rem) {
+      @slot;
+    }
+  }
+}
+
 @theme inline {
   --color-background: var(--color-background);
   --color-foreground: var(--color-text);
@@ -72,18 +96,73 @@ body {
   overflow: hidden;
 }
 
+/* Escala tipográfica semântica: o MESMO tipo de texto tem o MESMO tamanho em
+   TODAS as telas (evita a incoerência de "mesmo tipo com tamanho diferente"). A
+   hierarquia vem do NÍVEL (título de página > título de card > corpo > rótulo),
+   nunca da tela. Tudo em `rem`, então o slider "Tamanho da fonte" escala junto. */
+.typo-title {
+  font-size: 1.5rem; /* 24px */
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.typo-heading {
+  font-size: 1.25rem; /* 20px */
+  font-weight: 600;
+  line-height: 1.3;
+}
+.typo-eyebrow {
+  font-size: 0.75rem; /* 12px */
+  font-weight: 600;
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.typo-body {
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.5;
+}
+.typo-caption {
+  font-size: 0.75rem; /* 12px */
+  line-height: 1.4;
+}
+
 a {
   color: inherit;
   text-decoration: none;
 }
 
-button,
-input {
-  font: inherit;
+/* Em `@layer base` para NÃO sobrepor as utilities do Tailwind: senão `font:
+   inherit` (regra sem layer) vencia o `text-xs` dos <button> e eles herdavam o
+   tamanho do corpo (16px) — enquanto <a> ficava 12px, causando a incoerência na
+   navbar. Na base layer, as utilities (text-*) voltam a valer nos botões. */
+@layer base {
+  button,
+  input {
+    font: inherit;
+  }
 }
 
 ::selection {
   background: color-mix(in srgb, var(--color-primary) 24%, white);
+}
+
+/* Áreas seguras (barra de status, recorte da tela, barra de navegação do SO). No
+   APK o Capacitor injeta `--safe-area-inset-*` (o `env()` do WebView do Android
+   falha em várias versões); no navegador e no iOS vale o `env()`, que só é maior
+   que zero com `viewport-fit=cover` (layout raiz). Use sempre estas variáveis. */
+:root {
+  --app-safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --app-safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+}
+
+/* Header e footer estendem o próprio fundo sob as barras do SO; sem eles (login,
+   rota `minimal`), a estrutura reserva o espaço para o conteúdo não ficar por baixo. */
+[data-layout-structure]:not(:has([data-region="header"])) {
+  padding-top: var(--app-safe-top);
+}
+[data-layout-structure]:not(:has([data-layout-region="footer-mobile"])) {
+  padding-bottom: var(--app-safe-bottom);
 }
 
 :root {
@@ -154,6 +233,38 @@ body::-webkit-scrollbar-thumb,
   background: color-mix(in srgb, var(--color-primary) 55%, white);
 }
 
+/* Gaveta full-screen do menu (mobile): entra deslizando da esquerda para a
+   direita, na mesma curva `ease` das transicoes da sidebar web (~0.24s). Como a
+   gaveta so monta ao abrir, o keyframe roda uma unica vez na abertura. Sem guard
+   de prefers-reduced-motion: a animacao de abertura e curta e foi pedida. */
+@keyframes menu-drawer-slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Saída: desliza de volta para a esquerda; `forwards` segura o estado final
+   (fora da tela) até o React desmontar a gaveta. */
+@keyframes menu-drawer-slide-out {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+[data-menu-drawer] {
+  animation: menu-drawer-slide-in 0.24s ease;
+}
+
+[data-menu-drawer][data-closing] {
+  animation: menu-drawer-slide-out 0.24s ease forwards;
+}
+
 /* Sidebar de navegacao (painel "menu"): rail colapsado (so icones) por
    padrao, expande para a largura configurada ao passar o mouse ou focar.
    Os seletores usam [data-nav-rail] + classe para ganhar especificidade sobre
@@ -169,14 +280,16 @@ body::-webkit-scrollbar-thumb,
   width: var(--rail-expanded-width, 280px);
 }
 
+/* Colapsado: sem padding vertical — a altura vem de min-height
+   (--layout-content-top-height) para a borda alinhar com o topo do MainContent. */
 [data-nav-rail] .sidebar-rail-header {
-  padding: 0.5rem;
+  padding: 0 0.5rem;
   transition: padding 0.2s ease;
 }
 
 [data-nav-rail]:hover .sidebar-rail-header,
 [data-nav-rail]:focus-within .sidebar-rail-header {
-  padding: 1.5rem;
+  padding: 0 1.5rem;
 }
 
 [data-nav-rail] .sidebar-rail-title {
@@ -431,5 +544,107 @@ body::-webkit-scrollbar-thumb,
     display: none;
     width: 0;
     height: 0;
+  }
+}
+
+/* ─── Regiões do shell: apresentação por view ────────────────────────────────
+   Uma região marcada com `data-region` tem a aparência definida AQUI, para as
+   duas views, em vez de classes condicionais em cada componente. Regras SEM
+   layer de propósito: precisam vencer as utilities dos botões/filhos que a
+   região dimensiona (ex.: o `w-full` de um botão vira `auto`/`flex-1` na barra).
+   Uma tela que precise fugir do padrão simplesmente não usa a região. */
+
+/* Identidade da navbar/sidebar esquerda (tokens do esquema de cores): os tokens
+   da PÁGINA são remapeados, então componentes comuns (Button outline, campos,
+   cards) dentro da região seguem a cor da barra sem cores duplicadas. */
+[data-region="drawer"],
+[data-view="mobile"] [data-region="actions"] {
+  --color-surface: color-mix(in srgb, var(--color-left-sidebar-foreground) 6%, transparent);
+  --color-surface-strong: color-mix(in srgb, var(--color-left-sidebar-foreground) 12%, transparent);
+  --color-text: var(--color-left-sidebar-foreground);
+  --color-text-muted: color-mix(in srgb, var(--color-left-sidebar-foreground) 65%, transparent);
+  --color-border: var(--color-left-sidebar-border);
+  --shadow-soft: none;
+}
+
+/* Painéis especiais das sidebars (`SidebarPanelFrame`): o quadro já usa as cores
+   da área (left/right, via `--color-sidebar-*`); aqui os tokens da página são
+   remapeados para que blocos, textos e campos do conteúdo sigam a mesma área —
+   senão um painel claro mostra blocos escuros do tema da página, ou o inverso. */
+[data-region="sidebar-panel"] {
+  --color-surface: color-mix(in srgb, var(--color-sidebar-foreground) 6%, transparent);
+  --color-surface-strong: color-mix(in srgb, var(--color-sidebar-foreground) 12%, transparent);
+  --color-text: var(--color-sidebar-foreground);
+  --color-text-muted: color-mix(in srgb, var(--color-sidebar-foreground) 65%, transparent);
+  --color-border: var(--color-sidebar-border);
+  --shadow-soft: none;
+}
+
+/* Header no mobile: conteúdo injetado pelas telas (ScreenTitle, botões "top")
+   segue as cores do header do esquema, não as da página. No desktop o header
+   mantém os próprios componentes (logo, navegação, conta) sem remapear. */
+[data-view="mobile"] [data-region="header"] {
+  --color-surface: color-mix(in srgb, var(--color-header-foreground) 6%, transparent);
+  --color-surface-strong: color-mix(in srgb, var(--color-header-foreground) 12%, transparent);
+  --color-text: var(--color-header-foreground);
+  --color-text-muted: color-mix(in srgb, var(--color-header-foreground) 65%, transparent);
+  --color-border: color-mix(in srgb, var(--color-header-foreground) 28%, transparent);
+  --shadow-soft: none;
+}
+
+/* Barra de AÇÕES (`Button type="action"`): web = rodapé do MainContent, botões
+   centralizados com largura mínima; mobile = dentro do footer, no lugar da
+   navegação, botões dividindo a largura. */
+[data-region="actions"] {
+  display: flex;
+  /* Botões da barra com a mesma altura: rótulo que quebra em duas linhas
+     ("Autorização de desconto") não deixa os vizinhos menores. */
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+/* Web: rodapé do MainContent em três (saída · centro · ações); ele já tem borda e
+   fundo. Saída alinha à esquerda; ações, à direita. */
+[data-layout-region="content-actions"] > [data-region="actions"] {
+  border-top: 0;
+  background: none;
+  padding-inline: 0;
+}
+[data-layout-region="content-actions"] > [data-footer-slot="start"] {
+  justify-content: flex-start;
+}
+[data-layout-region="content-actions"] > [data-footer-slot="end"] {
+  justify-content: flex-end;
+}
+[data-region="actions"][hidden] {
+  display: none;
+}
+[data-region="actions"] > button {
+  width: auto;
+  height: auto;
+  min-width: 9rem;
+  padding: 0.75rem 2rem;
+  font-size: 0.875rem;
+}
+[data-view="mobile"] [data-region="actions"] {
+  background: var(--color-left-sidebar-background);
+  border-top-color: var(--color-left-sidebar-border);
+  /* Borda do `outline` derivada do texto da barra: a borda da sidebar some
+     sobre fundo escuro. */
+  --color-border: color-mix(in srgb, var(--color-left-sidebar-foreground) 28%, transparent);
+}
+[data-view="mobile"] [data-region="actions"] > button {
+  flex: 1;
+  min-width: 0;
+  padding-inline: 1rem;
+}
+/* Mobile largo (`wide`): dividir 800px em dois botões gigantes perde o alvo;
+   cada botão cresce até 16rem e o grupo fica centralizado na barra. */
+@media (width >= 48rem) {
+  [data-view="mobile"] [data-region="actions"] > button {
+    flex: 0 1 16rem;
   }
 }

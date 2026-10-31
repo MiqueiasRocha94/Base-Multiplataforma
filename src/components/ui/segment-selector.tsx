@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export type SegmentSelectorOption<Value extends string> = {
   label: string;
@@ -21,17 +21,30 @@ export function SegmentSelector<Value extends string>({
   onChange,
 }: SegmentSelectorProps<Value>) {
   return (
-    <div className="inline-grid rounded-full border border-border bg-background p-1 shadow-inner" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+    // Colunas `auto-fit`/`minmax`: ocupa a largura do container e QUEBRA em mais
+    // linhas quando os rótulos não cabem numa só (ex.: painel estreito com 4
+    // opções ou rótulos longos como "Sistema") — em vez de espremer/truncar.
+    // <button> simples (não o Button de ui): o `size` do Button força px-5 e
+    // esmagaria o texto neste espaço estreito.
+    <div
+      className="grid w-full gap-1 rounded-2xl border border-border bg-background p-1 shadow-inner"
+      style={{ gridTemplateColumns: "repeat(auto-fit, minmax(50px, 1fr))" }}
+    >
       {options.map((option) => (
-        <Button
+        <button
           key={option.value}
-          variant="ghost"
+          type="button"
           disabled={disabled}
-          className={option.value === value ? "h-9 rounded-full bg-primary px-5 text-white hover:bg-primary" : "h-9 rounded-full px-5"}
           onClick={() => onChange(option.value)}
+          className={cn(
+            "flex h-9 min-w-0 items-center justify-center rounded-2xl px-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
+            option.value === value
+              ? "bg-primary text-white"
+              : "text-[color:var(--color-text)] hover:bg-[color:var(--color-surface-strong)]",
+          )}
         >
-          {option.label}
-        </Button>
+          <span className="truncate">{option.label}</span>
+        </button>
       ))}
     </div>
   );

@@ -15,8 +15,25 @@ export async function resolveProtectedAccessMode(): Promise<ProtectedAccessMode>
   }
 
   const available = await isBiometricAuthAvailable();
-  const enabled = getBiometricPreference(session.email);
+  const enabled = getBiometricPreference(session.login);
   return available && enabled ? "biometric" : "none";
+}
+
+// "Sair" do menu com biometria ligada volta ao login mantendo a sessão: nessa
+// volta a tela de biometria não pede a digital sozinha (a pessoa toca para
+// entrar). Estado de módulo — vale para a navegação client-side seguinte.
+let skipBiometricAutoPrompt = false;
+
+export function skipBiometricAutoPromptOnce() {
+  skipBiometricAutoPrompt = true;
+}
+
+export function biometricAutoPromptSkipped() {
+  return skipBiometricAutoPrompt;
+}
+
+export function clearBiometricAutoPromptSkip() {
+  skipBiometricAutoPrompt = false;
 }
 
 export async function hasSavedProtectedSession(): Promise<boolean> {

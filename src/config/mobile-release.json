@@ -1,0 +1,5 @@
+{
+  "$comment": "Páginas e perfis publicados no app (APK de homologação/produção). Lista vazia = sem restrição; com itens, o que estiver fora sai do build mobile — docs/ambiente-e-build.md → \"Páginas publicadas no app\".",
+  "profiles": [],
+  "routes": []
+}

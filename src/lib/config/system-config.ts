@@ -51,6 +51,7 @@ export const DEFAULT_LAYOUT_CONFIG: SystemLayoutConfig = {
   mainContentCardMargin: 10,
   zIndexHeader: 1000,
   zIndexFooter: 1000,
+  accountPlacement: "auto",
 };
 
 /** Formato do arquivo estatico (o JSON commitado / exportado pelo painel). */
@@ -61,7 +62,11 @@ export type SystemConfigFile = {
   fontPreset: FontPreset;
   fontScale: number;
   layout: SystemLayoutConfig;
-  /** Store serializado (activeSchemeId + esquemas do usuario + areas + charts). */
+  /**
+   * Store serializado do esquema de cores. Aceita o formato NOVO (customizações
+   * por marca + active por marca) e o LEGADO (schemes flat + activeSchemeId),
+   * resolvido em `parseColorSchemeStore` sem migração destrutiva.
+   */
   colorScheme: unknown;
 };
 
@@ -84,7 +89,7 @@ function normalizeRadius(value: unknown): RadiusPreset {
 }
 
 function normalizeFontPreset(value: unknown): FontPreset {
-  return value === "system" || value === "reading" || value === "compact" ? value : "system";
+  return value === "manrope" || value === "system" || value === "reading" ? value : "manrope";
 }
 
 function normalizeFontScale(value: unknown): number {

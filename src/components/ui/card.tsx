@@ -28,7 +28,7 @@ export const CardTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttribut
   { className, ...props },
   ref,
 ) {
-  return <h2 ref={ref} className={cn("text-2xl font-semibold tracking-tight", className)} {...props} />;
+  return <h2 ref={ref} className={cn("typo-heading tracking-tight", className)} {...props} />;
 });
 
 export const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(

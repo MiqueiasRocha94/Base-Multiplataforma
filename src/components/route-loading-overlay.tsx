@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 
 const HIDE_AFTER_COMMIT_MS = 300;
 const SAFETY_TIMEOUT_MS = 6000;
+/** Rotação: esconde o loading após este tempo sem novos `resize`. */
+const ROTATION_SETTLE_MS = 400;
 
 const isLoginPath = (path: string) => path.startsWith("/login");
 
@@ -24,6 +26,7 @@ export function RouteLoadingOverlay() {
   const pathname = usePathname();
   const [visible, setVisible] = useState(false);
   const [fullScreen, setFullScreen] = useState(false);
+  const [rotating, setRotating] = useState(false);
   const isFirstRender = useRef(true);
   const previousPathname = useRef(pathname);
   const safetyTimeout = useRef<number | null>(null);
@@ -76,6 +79,53 @@ export function RouteLoadingOverlay() {
     };
   }, []);
 
+  // Rotação da tela: o shell se reorganiza (no tablet a view troca entre mobile
+  // e desktop) e os quadros intermediários mostrariam o layout "no meio do
+  // caminho". Cobre a tela inteira com o Loading (o mesmo do `app/loading.tsx`,
+  // que só aparece em navegação) até os `resize` da rotação assentarem.
+  useEffect(() => {
+    const portrait = window.matchMedia("(orientation: portrait)");
+    let settleTimeout: number | null = null;
+    let safety: number | null = null;
+    let rotating = false;
+
+    const finish = () => {
+      rotating = false;
+      if (settleTimeout !== null) window.clearTimeout(settleTimeout);
+      if (safety !== null) window.clearTimeout(safety);
+      settleTimeout = null;
+      safety = null;
+      setRotating(false);
+    };
+
+    const scheduleSettle = () => {
+      if (settleTimeout !== null) window.clearTimeout(settleTimeout);
+      settleTimeout = window.setTimeout(finish, ROTATION_SETTLE_MS);
+    };
+
+    const onOrientationChange = () => {
+      rotating = true;
+      setRotating(true);
+      scheduleSettle();
+      if (safety !== null) window.clearTimeout(safety);
+      safety = window.setTimeout(finish, SAFETY_TIMEOUT_MS);
+    };
+
+    const onResize = () => {
+      if (rotating) scheduleSettle();
+    };
+
+    portrait.addEventListener("change", onOrientationChange);
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      portrait.removeEventListener("change", onOrientationChange);
+      window.removeEventListener("resize", onResize);
+      if (settleTimeout !== null) window.clearTimeout(settleTimeout);
+      if (safety !== null) window.clearTimeout(safety);
+    };
+  }, []);
+
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -93,7 +143,7 @@ export function RouteLoadingOverlay() {
     return () => window.clearTimeout(timeout);
   }, [pathname]);
 
-  if (!visible) {
+  if (!visible && !rotating) {
     return null;
   }
 
@@ -103,7 +153,7 @@ export function RouteLoadingOverlay() {
       aria-busy="true"
       className={cn(
         "flex items-center justify-center bg-[color:var(--color-background)]",
-        fullScreen ? "fixed inset-0 z-[1500]" : "absolute inset-0 z-[60]",
+        fullScreen || rotating ? "fixed inset-0 z-[1500]" : "absolute inset-0 z-[60]",
       )}
     >
       <Loading className="min-h-0" />

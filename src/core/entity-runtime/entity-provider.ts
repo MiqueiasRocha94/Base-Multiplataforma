@@ -1,8 +1,12 @@
 import { apiDataProvider } from "@/core/entity-runtime/api-data-provider";
 import type { EntityDataProvider } from "@/core/entity-runtime/types";
+// @dev-only:start
+// eslint-disable-next-line no-restricted-imports -- D01 (desvio conhecido): core escolhe dev-backend × API aqui; corrige ao injetar o provider de dados
 import { devDataProvider } from "@/dev-backend";
 import { getStorageItem, storageKeys } from "@/lib/platform/storage";
+// @dev-only:end
 
+// @dev-only:start
 /**
  * Resolve qual provider de dados esta ativo. O frontend nao conhece a origem:
  *
@@ -29,7 +33,13 @@ function isMockedModeEnabled(): boolean {
     return false;
   }
 }
+// @dev-only:end
 
 export async function getEntityDataProvider(): Promise<EntityDataProvider> {
-  return isMockedModeEnabled() ? devDataProvider : apiDataProvider;
+  // @dev-only:start
+  if (isMockedModeEnabled()) {
+    return devDataProvider;
+  }
+  // @dev-only:end
+  return apiDataProvider;
 }

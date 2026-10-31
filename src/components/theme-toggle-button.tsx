@@ -29,7 +29,7 @@ export function ThemeToggleButton({ className }: { className?: string }) {
 
   const darkModeActive = mounted ? resolvedTheme === "dark" : false;
   const nextTheme = darkModeActive ? "light" : "dark";
-  const label = mounted ? (darkModeActive ? dictionary.profile.themeDark : dictionary.profile.themeLight) : dictionary.profile.themeLight;
+  const label = mounted ? (darkModeActive ? dictionary.account.themeDark : dictionary.account.themeLight) : dictionary.account.themeLight;
   const themeMode = mounted ? theme : "system";
 
   return (

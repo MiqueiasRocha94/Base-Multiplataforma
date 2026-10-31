@@ -5,18 +5,24 @@
  */
 export {
   buildCsv,
+  buildDateOf,
   buildFilterFields,
   buildFormFields,
   buildPredicate,
+  buildQueryFilters,
   buildRowStatus,
   buildTableColumns,
   buildZodSchema,
   displayValue,
   fieldLabel,
+  fileFields,
   formValuesToRecord,
   getRecordId,
+  normalizeColumns,
+  type NormalizedColumn,
   recordToFormValues,
   resolveActions,
+  serverSortableFields,
   type ModuleActionFlags,
 } from "@/core/module-engine/module-engine";
 export { getModule, registerModule, type ModuleDescriptor } from "@/core/module-engine/module-registry";

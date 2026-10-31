@@ -10,6 +10,13 @@ export type AppLocale = (typeof locales)[number];
 
 export const defaultLocale: AppLocale = "pt-BR";
 
+/**
+ * Idiomas oferecidos (seletor, idioma salvo, deteccao): subconjunto de `locales`.
+ * Um produto de publico de um idioma so deixa aqui apenas ele (a troca some); os
+ * demais seguem em `locales` (tipos e JSONs) para religar depois.
+ */
+export const enabledLocales: readonly AppLocale[] = ["pt-BR", "en", "es-ES"];
+
 export const languageLabels: Record<AppLocale, string> = {
   "pt-BR": "Portugues",
   en: "English",

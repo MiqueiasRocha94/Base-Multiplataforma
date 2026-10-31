@@ -24,4 +24,10 @@ export interface ActionDef {
   requiredRoles?: Role[];
   /** Combinacao dos requisitos (padrao "all"). */
   match?: ActionMatch;
+  /**
+   * Acao de LINHA liberada pelo backend por registro: so aparece quando
+   * `record[recordFlag] === true` (ex.: `podeSimularLiquidacao`). O front nao
+   * deduz a regra; sem a flag na resposta, a acao fica oculta.
+   */
+  recordFlag?: string;
 }

@@ -1,9 +1,14 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 
-import { getPlatform, isMobileViewport, isNativePlatform, isTabletViewport } from "@/lib/platform/capacitor";
+import { getPlatform, isDesktopViewport, isNativePlatform } from "@/lib/platform/capacitor";
 import { isBiometricAuthAvailable, requestBiometricAuth } from "@/lib/platform/biometrics";
+import { dismissKeyboard, subscribeDismissKeyboardOnSubmit } from "@/lib/platform/keyboard";
+import { subscribeSystemBarsSync } from "@/lib/platform/system-bars";
+import { applyOrientationPolicy } from "@/lib/platform/orientation";
+import { detectDeviceType, getDeviceInfo, getLoginDeviceId, type DeviceInfo, type DeviceType } from "@/lib/platform/device-info";
 import { subscribeToAppVisibility } from "@/lib/platform/app-visibility";
 import {
   initializePushNotifications,
@@ -13,12 +18,24 @@ import {
 } from "@/lib/platform/push-notifications";
 import { generateFileId, type FileItem } from "@/types/file-item";
 
-export type DeviceView = "mobile" | "desktop" | "tablet";
+/** Duas views: o tablet alterna entre elas pela orientação (retrato mobile, paisagem desktop). */
+export type DeviceView = "mobile" | "desktop";
+export type { DeviceInfo, DeviceType };
 
 // Detecção de dispositivo (parte "estado" do contexto).
 type DeviceState = {
+  /** Classe FÍSICA do aparelho (phone/tablet/desktop) — não depende da janela. */
+  deviceType: DeviceType;
+  /**
+   * Aparelho de TOQUE (celular ou tablet): recursos que dependem do teclado
+   * virtual/dedo, não do layout (ex.: editor do input). O tablet deitado tem a
+   * view `desktop`, mas comportamento de toque.
+   */
+  isTouch: boolean;
   isNative: boolean;
+  /** Aparelho físico é celular (atalho de `deviceType`). */
   isPhone: boolean;
+  /** Aparelho físico é tablet (a view dele varia com a orientação). */
   isTablet: boolean;
   platform: string;
   view: DeviceView;
@@ -27,6 +44,13 @@ type DeviceState = {
 // Contexto = detecção + portão único de recursos do dispositivo. Cada recurso
 // decide o caminho por plataforma/permissão, delegando para `@/lib/platform/*`.
 type DeviceContextValue = DeviceState & {
+  /**
+   * `false` até o dispositivo real ser resolvido após a montagem. Antes disso o
+   * estado é o default de SSR (`isNative: false`, `view: "desktop"`), então
+   * decisões de fluxo que dependem de apk × web (ex.: a tela de entrada) devem
+   * esperar por `resolved` para não agir sobre o valor determinístico do SSR.
+   */
+  resolved: boolean;
   /** Captura/seleção de imagem: câmera nativa (Prompt) × explorador de arquivos (web). */
   pickImage: () => Promise<FileItem | null>;
   /** Biometria disponível no aparelho (sempre false na web). */
@@ -41,6 +65,10 @@ type DeviceContextValue = DeviceState & {
   subscribeNotifications: (listener: (items: DeviceNotification[]) => void) => () => void;
   /** Assina o token de push corrente. */
   subscribePushToken: (listener: (token: string | null) => void) => () => void;
+  /** Dados do aparelho (marca, modelo, SO, físico/emulador). */
+  getDeviceInfo: () => Promise<DeviceInfo>;
+  /** `deviceid` do login (`marca|modelo|plataforma|SO|execução|token`, formato do base-expo). */
+  getLoginDeviceId: () => Promise<string>;
 };
 
 // --- Recursos do dispositivo (funções estáveis, decidem web × nativo) ---
@@ -96,6 +124,8 @@ const DeviceContext = createContext<DeviceContextValue | null>(null);
 // determinístico (sem ler window/matchMedia) para o HTML do servidor bater com
 // a hidratação. O dispositivo real é resolvido após a montagem, no useEffect.
 const SSR_DEVICE_STATE: DeviceState = {
+  deviceType: "desktop",
+  isTouch: false,
   isNative: false,
   isPhone: false,
   isTablet: false,
@@ -103,28 +133,28 @@ const SSR_DEVICE_STATE: DeviceState = {
   view: "desktop",
 };
 
+/**
+ * View (apresentação) — regra ÚNICA, web e nativo:
+ *   `desktop` = paisagem E largura ≥ DESKTOP_MIN_WIDTH (1024); o resto é `mobile`.
+ * - celular: sempre `mobile` (retrato ~360–430, deitado até ~932). No nativo
+ *   ainda fica travado em retrato (`applyOrientationPolicy`);
+ * - tablet: retrato (744–1024) = `mobile`; paisagem (≥ 1024) = `desktop`;
+ * - desktop: sempre paisagem = `desktop`; janela estreita/retrato = `mobile`.
+ * O comportamento de toque (`isTouch`) vem do APARELHO, não da view.
+ * A rotação/redimensionamento dispara `resize`, então a view acompanha.
+ */
 function resolveDeviceState(): DeviceState {
   const native = isNativePlatform();
-  const phoneViewport = isMobileViewport();
-  const tabletViewport = isTabletViewport();
+  const deviceType = detectDeviceType();
   const platform = native ? getPlatform() : "web";
-  const nativeMobilePlatform = native && (platform === "android" || platform === "ios");
-
-  let view: DeviceView = "desktop";
-
-  if (phoneViewport) {
-    view = "mobile";
-  } else if (tabletViewport || nativeMobilePlatform) {
-    view = "tablet";
-  }
-
-  const isPhone = view === "mobile";
-  const isTablet = view === "tablet";
+  const view: DeviceView = isDesktopViewport() ? "desktop" : "mobile";
 
   return {
+    deviceType,
+    isTouch: deviceType !== "desktop",
     isNative: native,
-    isPhone,
-    isTablet,
+    isPhone: deviceType === "phone",
+    isTablet: deviceType === "tablet",
     platform,
     view,
   };
@@ -132,6 +162,8 @@ function resolveDeviceState(): DeviceState {
 
 function sameDeviceState(a: DeviceState, b: DeviceState): boolean {
   return (
+    a.deviceType === b.deviceType &&
+    a.isTouch === b.isTouch &&
     a.isNative === b.isNative &&
     a.isPhone === b.isPhone &&
     a.isTablet === b.isTablet &&
@@ -142,6 +174,7 @@ function sameDeviceState(a: DeviceState, b: DeviceState): boolean {
 
 export function DeviceProvider({ children }: { children: React.ReactNode }) {
   const [deviceState, setDeviceState] = useState<DeviceState>(SSR_DEVICE_STATE);
+  const [resolved, setResolved] = useState(false);
 
   useEffect(() => {
     // Só troca o estado quando o dispositivo realmente muda: resolveDeviceState
@@ -153,6 +186,7 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
     const updateDeviceState = () => {
       const next = resolveDeviceState();
       setDeviceState((current) => (sameDeviceState(current, next) ? current : next));
+      setResolved(true);
     };
 
     const onResize = () => {
@@ -176,9 +210,49 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Nativo: celular trava em retrato; tablet gira livre (depende do APARELHO,
+  // não da view — um tablet em janela estreita continua podendo girar).
+  useEffect(() => {
+    if (resolved) {
+      void applyOrientationPolicy(deviceState.deviceType);
+    }
+  }, [deviceState.deviceType, resolved]);
+
+  // Aparelho de toque: enviar um formulário (botão, Enter/"Ir") fecha o teclado
+  // virtual. No desktop o foco fica onde está (sem teclado para recolher).
+  useEffect(() => {
+    if (resolved && deviceState.isTouch) {
+      return subscribeDismissKeyboardOnSubmit();
+    }
+  }, [deviceState.isTouch, resolved]);
+
+  // App nativo: ícones das barras do SO acompanham o fundo sob elas (header,
+  // footer, overlays), conforme tema e marca. Na web as barras são do navegador.
+  useEffect(() => subscribeSystemBarsSync(), []);
+
+  // Aparelho de toque: trocar de página fecha o teclado virtual. O campo focado
+  // da página anterior é desmontado sem blur e o teclado ficaria aberto na nova.
+  const pathname = usePathname();
+  useEffect(() => {
+    if (resolved && deviceState.isTouch) {
+      dismissKeyboard();
+    }
+  }, [pathname, deviceState.isTouch, resolved]);
+
+  // Publica a view em `<html data-view>` — FONTE ÚNICA da apresentação por
+  // device no CSS (variantes `mobile:`/`desktop:` e regras de
+  // `[data-region]` em globals.css). No <html> para os portais herdarem também.
+  // Só após resolver: antes disso o estado é o default determinístico do SSR.
+  useEffect(() => {
+    if (resolved) {
+      document.documentElement.dataset.view = deviceState.view;
+    }
+  }, [deviceState.view, resolved]);
+
   const value = useMemo<DeviceContextValue>(
     () => ({
       ...deviceState,
+      resolved,
       pickImage: pickImageResource,
       isBiometricAvailable: isBiometricAuthAvailable,
       authenticateBiometric: authenticateBiometricResource,
@@ -186,8 +260,10 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
       registerPush: initializePushNotifications,
       subscribeNotifications: subscribeDeviceNotifications,
       subscribePushToken,
+      getDeviceInfo,
+      getLoginDeviceId,
     }),
-    [deviceState],
+    [deviceState, resolved],
   );
 
   return <DeviceContext.Provider value={value}>{children}</DeviceContext.Provider>;

@@ -6,7 +6,7 @@ import { RadialBar, RadialBarChart } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import type { ChannelSlice } from "@/types/analytics";
 
-import { buildChannelConfig } from "./analytics-charts-config";
+import { buildChannelConfig } from "@/lib/analytics/chart-config";
 
 export function ChannelRadialChart({ data }: { data: ChannelSlice[] }) {
   const config = useMemo(() => buildChannelConfig(data), [data]);

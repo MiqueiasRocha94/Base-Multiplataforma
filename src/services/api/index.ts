@@ -1,1 +1,1 @@
-export * from "@/services/api/http";
+export * from "@/lib/http";

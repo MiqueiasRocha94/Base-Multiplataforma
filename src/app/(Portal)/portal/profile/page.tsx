@@ -1,120 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-import {
-  ProfileAccountActionsSection,
-  ProfileActionsSection,
-  ProfileDetailsCard,
-  ProfileHeader,
-} from "@/components/profile-page-sections";
-import { useAuth } from "@/contexts/AuthContext";
+import { ProfilePanel } from "@/components/profile-panel";
 import { useDevice } from "@/contexts/DeviceContext";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { useTheme } from "@/contexts/ThemeProvider";
-
-function resolveAccessLabel(isNative: boolean, biometricEnabled: boolean, dictionary: ReturnType<typeof useLanguage>["dictionary"]) {
-  if (!isNative) {
-    return dictionary.profile.accessWeb;
-  }
-
-  return biometricEnabled ? dictionary.profile.accessBiometricEnabled : dictionary.profile.accessBiometricDisabled;
-}
+import { requestOpenAccountMenu } from "@/lib/account-menu-signal";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { dictionary, locale } = useLanguage();
-  const { theme, fontPreset, setFontPreset } = useTheme();
-  const { biometricEnabled, session, signOut } = useAuth();
-  const { isNative, view } = useDevice();
-  const [expanded, setExpanded] = useState(false);
-  const [configExpanded, setConfigExpanded] = useState(false);
+  const { view, resolved } = useDevice();
 
-  const profileName = session?.username ?? dictionary.profile.guestName;
-  const accessLabel = resolveAccessLabel(isNative, biometricEnabled, dictionary);
+  // Profile é uma tela MOBILE-only: no desktop/tablet a conta vive no AccountMenu
+  // (dropdown do header). Ao cair aqui numa tela maior — incluindo crescer o
+  // viewport estando na tela — volta para a Home e abre o menu da conta.
+  // Espera `resolved` para não redirecionar sobre a view determinística do SSR.
+  // No mobile o mesmo conteúdo também aparece no topo da gaveta do Menu.
+  useEffect(() => {
+    if (resolved && view !== "mobile") {
+      router.replace("/portal/home");
+      requestOpenAccountMenu();
+    }
+  }, [resolved, view, router]);
 
-  if (view === "mobile") {
-    return (
-      <section className="grid gap-3 px-4 py-4">
-        <ProfileHeader
-          name={profileName}
-          email={session?.email ?? dictionary.profile.guestEmail}
-          subtitle={dictionary.profile.subtitle}
-        />
-
-        <ProfileDetailsCard
-          dictionary={dictionary}
-          email={session?.email ?? dictionary.profile.guestEmail}
-          expanded
-          fontPreset={fontPreset}
-          locale={locale}
-          loggedAt={session?.loggedAt ?? null}
-          name={profileName}
-          onToggleExpanded={() => setExpanded((current) => !current)}
-          theme={theme}
-          accessLabel={accessLabel}
-        />
-
-        <ProfileActionsSection
-          configExpanded
-          dictionary={dictionary}
-          fontPreset={fontPreset}
-          onSetFontPreset={setFontPreset}
-          onToggleExpanded={() => setConfigExpanded((current) => !current)}
-        />
-
-        <ProfileAccountActionsSection
-          dictionary={dictionary}
-          mobileShell
-          onLogout={() => {
-            signOut();
-            router.replace("/home");
-          }}
-          sessionActive={Boolean(session)}
-        />
-      </section>
-    );
+  if (view !== "mobile") {
+    return null;
   }
 
-  return (
-    <section className="mx-auto grid w-full max-w-4xl gap-6 py-8">
-      <ProfileHeader
-        name={profileName}
-        email={session?.email ?? dictionary.profile.guestEmail}
-        subtitle={dictionary.profile.subtitle}
-      />
-
-      <ProfileDetailsCard
-        dictionary={dictionary}
-        email={session?.email ?? dictionary.profile.guestEmail}
-        expanded={expanded}
-        fontPreset={fontPreset}
-        locale={locale}
-        loggedAt={session?.loggedAt ?? null}
-        name={profileName}
-        onToggleExpanded={() => setExpanded((current) => !current)}
-        theme={theme}
-        accessLabel={accessLabel}
-      />
-
-      <ProfileActionsSection
-        configExpanded={configExpanded}
-        dictionary={dictionary}
-        fontPreset={fontPreset}
-        onSetFontPreset={setFontPreset}
-        onToggleExpanded={() => setConfigExpanded((current) => !current)}
-      />
-
-        <ProfileAccountActionsSection
-          dictionary={dictionary}
-          mobileShell={false}
-          onLogout={() => {
-            signOut();
-          router.replace("/home");
-        }}
-        sessionActive={Boolean(session)}
-      />
-    </section>
-  );
+  return <ProfilePanel className="px-0 py-3" />;
 }

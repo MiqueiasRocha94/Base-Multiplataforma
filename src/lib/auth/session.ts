@@ -1,88 +1,132 @@
-import { getStorageItem, removeStorageItem, setStorageItem, storageKeys } from "@/lib/platform/storage";
-import { resolveAuthUser } from "@/lib/auth/demo-users";
+import { toUser } from "@/lib/auth/acesso";
+import {
+  getSessionItem,
+  getStorageItem,
+  removeSessionItem,
+  removeStorageItem,
+  setSessionItem,
+  setStorageItem,
+  storageKeys,
+} from "@/lib/platform/storage";
+import type { SessaoAcesso } from "@/types/acesso";
 import type { User } from "@/types/user";
 
-export type DemoSession = {
+/**
+ * Sessao autenticada no app (docs/autenticacao-e-permissoes.md).
+ *
+ * Guarda o token e a hora de expiracao (`agora + expiresIn`), nunca a senha.
+ * A resposta traz `refreshExpiresIn`: a sessao segue viva enquanto o refresh
+ * valer e o transporte renova o token (web: refresh em cookie HttpOnly;
+ * nativo: `refreshToken` aqui). Sem refresh: expirou → a sessao some e o
+ * gate manda para o login. Web usa `sessionStorage`; nativo, o storage do app
+ * (ver `getSessionItem`).
+ */
+export type AuthSession = {
+  /** Login digitado — chave por usuario (biometria, atalhos da barra). */
+  login: string;
+  /** Nome para exibicao. */
+  username: string;
+  /** E-mail do usuario (cai para o login quando a API nao envia). */
   email: string;
   accessToken: string;
-  username: string;
-  profile: "portal";
-  allowedRoutes: string[];
+  /** `DPoP` = token vinculado a chave da instalacao (`lib/auth/dpop`). */
+  tokenType?: "Bearer" | "DPoP";
+  /** Epoch em ms. */
+  expiresAt: number;
+  /** So nativo (no web o refresh fica em cookie HttpOnly). */
+  refreshToken?: string;
+  /** Epoch em ms; ausente = sessao sem renovacao. */
+  refreshExpiresAt?: number;
   loggedAt: string;
+  senhaExpirada: boolean;
 };
 
-const cookieKeys = {
-  accessToken: "mp_access_token",
-  username: "mp_username",
-  profile: "mp_profile",
-  allowedRoutes: "mp_allowed_routes",
-};
+type SessionListener = (session: AuthSession | null) => void;
 
-function writeCookie(name: string, value: string, maxAge = 60 * 60 * 8) {
-  if (typeof document === "undefined") {
-    return;
+const listeners = new Set<SessionListener>();
+
+/**
+ * Avisa mudancas feitas fora do AuthContext (renovacao do token pelo
+ * transporte, refresh recusado). Devolve o cancelamento.
+ */
+export function subscribeSession(listener: SessionListener) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function notify(session: AuthSession | null) {
+  listeners.forEach((listener) => listener(session));
+}
+
+/** Refresh ainda valido → a sessao sobrevive ao access token expirado. */
+export function sessaoRenovavel(session: AuthSession): boolean {
+  return typeof session.refreshExpiresAt === "number" && session.refreshExpiresAt > Date.now();
+}
+
+/**
+ * Persiste a resposta do auth (login, `/senha`, `/refresh`, `/me`).
+ * Toda resposta com `token` SUBSTITUI o guardado (e a renovacao que veio com
+ * ele); `/me` (sem token) mantem o atual.
+ */
+export function saveSession(sessao: SessaoAcesso, current: AuthSession | null = null): AuthSession {
+  const token = sessao.token ?? current?.accessToken;
+  if (!token) {
+    throw new Error("Resposta do auth sem token.");
   }
 
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax`;
-}
+  const now = Date.now();
+  const novoToken = Boolean(sessao.token);
+  const session: AuthSession = {
+    login: sessao.login,
+    username: sessao.nome || sessao.login,
+    email: sessao.email || sessao.login,
+    accessToken: token,
+    tokenType: novoToken ? (sessao.tokenType ?? "Bearer") : current?.tokenType,
+    expiresAt: sessao.expiresIn ? now + sessao.expiresIn * 1000 : (current?.expiresAt ?? now),
+    refreshToken: novoToken ? sessao.refreshToken : current?.refreshToken,
+    refreshExpiresAt: novoToken
+      ? (sessao.refreshExpiresIn ? now + sessao.refreshExpiresIn * 1000 : undefined)
+      : current?.refreshExpiresAt,
+    loggedAt: current?.loggedAt ?? new Date().toISOString(),
+    senhaExpirada: sessao.senhaExpirada === true,
+  };
 
-function clearCookie(name: string) {
-  if (typeof document === "undefined") {
-    return;
-  }
+  setSessionItem(storageKeys.session, JSON.stringify(session));
+  setSessionItem(storageKeys.sessionUser, JSON.stringify(toUser(sessao)));
 
-  document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
-}
-
-function readCookie(name: string): string | null {
-  if (typeof document === "undefined") {
-    return null;
-  }
-
-  const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
-  return match ? decodeURIComponent(match[2]) : null;
-}
-
-function persistSessionCookies(session: DemoSession) {
-  writeCookie(cookieKeys.accessToken, session.accessToken);
-  writeCookie(cookieKeys.username, session.username);
-  writeCookie(cookieKeys.profile, session.profile);
-  writeCookie(cookieKeys.allowedRoutes, JSON.stringify(session.allowedRoutes));
-}
-
-function clearSessionCookies() {
-  clearCookie(cookieKeys.accessToken);
-  clearCookie(cookieKeys.username);
-  clearCookie(cookieKeys.profile);
-  clearCookie(cookieKeys.allowedRoutes);
-}
-
-export async function signIn(email: string, biometricOptIn = false): Promise<DemoSession> {
-  const session = {
-    email,
-    accessToken: `demo-token-${Math.random().toString(36).slice(2, 10)}`,
-    username: email.split("@")[0] || email,
-    profile: "portal" as const,
-    allowedRoutes: ["portal"],
-    loggedAt: new Date().toISOString(),
-  } satisfies DemoSession;
-
-  setStorageItem(storageKeys.session, JSON.stringify(session));
-  persistSessionCookies(session);
-  setBiometricPreference(email, biometricOptIn);
-
-  // Resolve e persiste a identidade completa (`/auth/me` mockado). No backend
-  // real, o `User` (com roles/permissions) vem da resposta do login.
-  const user = resolveAuthUser(email);
-  setStorageItem(storageKeys.sessionUser, JSON.stringify(user));
-
+  notify(session);
   return session;
 }
 
-/** Identidade autenticada persistida (fonte de verdade da autorizacao na UI). */
-export function getSessionUser(): User | null {
-  const serialized = getStorageItem(storageKeys.sessionUser);
+/**
+ * Sessao guardada, ou `null` quando ausente, corrompida ou expirada (token
+ * vencido SEM refresh valido). Limpa sem avisar: pode rodar durante o render.
+ */
+export function getSession(): AuthSession | null {
+  const serialized = getSessionItem(storageKeys.session);
+  if (!serialized) {
+    return null;
+  }
 
+  try {
+    const session = JSON.parse(serialized) as AuthSession;
+    const vigente = typeof session.expiresAt === "number" && (session.expiresAt > Date.now() || sessaoRenovavel(session));
+    if (!session.accessToken || !vigente) {
+      removeStoredSession();
+      return null;
+    }
+    return session;
+  } catch {
+    removeStoredSession();
+    return null;
+  }
+}
+
+/** Identidade autenticada da sessao guardada. */
+export function getSessionUser(): User | null {
+  const serialized = getSessionItem(storageKeys.sessionUser);
   if (!serialized) {
     return null;
   }
@@ -90,46 +134,9 @@ export function getSessionUser(): User | null {
   try {
     return JSON.parse(serialized) as User;
   } catch {
-    removeStorageItem(storageKeys.sessionUser);
+    removeSessionItem(storageKeys.sessionUser);
     return null;
   }
-}
-
-export function getSession(): DemoSession | null {
-  const serialized = getStorageItem(storageKeys.session);
-
-  if (serialized) {
-    try {
-      return JSON.parse(serialized) as DemoSession;
-    } catch {
-      removeStorageItem(storageKeys.session);
-    }
-  }
-
-  const accessToken = readCookie(cookieKeys.accessToken);
-  const username = readCookie(cookieKeys.username);
-  const profile = readCookie(cookieKeys.profile);
-  const allowedRoutesRaw = readCookie(cookieKeys.allowedRoutes);
-
-  if (!accessToken || !username || profile !== "portal") {
-    return null;
-  }
-
-  let allowedRoutes: string[] = [];
-  try {
-    allowedRoutes = allowedRoutesRaw ? JSON.parse(allowedRoutesRaw) : [];
-  } catch {
-    allowedRoutes = [];
-  }
-
-  return {
-    email: username,
-    accessToken,
-    username,
-    profile: "portal",
-    allowedRoutes,
-    loggedAt: new Date().toISOString(),
-  };
 }
 
 export function setBiometricPreference(login: string, enabled: boolean) {
@@ -140,12 +147,19 @@ export function getBiometricPreference(login: string) {
   return getStorageItem(`${storageKeys.biometricPreferenceByLogin}:${login.toLowerCase()}`) === "true";
 }
 
-export function clearSession() {
+function removeStoredSession() {
+  removeSessionItem(storageKeys.session);
+  removeSessionItem(storageKeys.sessionUser);
+  // Sessao demo antiga ficava no localStorage.
   removeStorageItem(storageKeys.session);
   removeStorageItem(storageKeys.sessionUser);
-  clearSessionCookies();
 }
 
-export function signOut() {
-  clearSession();
+/**
+ * Logout local = descartar o token no app. O AuthContext tambem chama
+ * `/auth/logout` para revogar a sessao no servidor.
+ */
+export function clearSession() {
+  removeStoredSession();
+  notify(null);
 }

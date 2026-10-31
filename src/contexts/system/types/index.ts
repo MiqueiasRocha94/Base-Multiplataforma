@@ -1,7 +1,10 @@
 export type {
+  LayoutFlags,
   MainContentMode,
+  RegionKey,
   SidebarDisplayMode,
   SidebarLayoutMode,
+  AccountPlacement,
   SidebarSide,
   SystemLayoutConfig,
 } from "./layout";

@@ -7,6 +7,7 @@ import { SidebarItem } from "@/components/sidebar-item";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { useSystemContext } from "@/contexts/SystemContext";
+import { useAccountPlacement } from "@/hooks/use-account-placement";
 import { LucideTextAlignJustify } from "lucide-react";
 
 export function LeftSidebar({
@@ -16,10 +17,11 @@ export function LeftSidebar({
 }) {
   const { dictionary } = useLanguage();
   const { desktopMode } = useNavigation();
+  // Perfil no menu: header oculto, ou escolhido no painel estrutural.
+  const accountInMenu = useAccountPlacement().placement === "menu";
   const {
-    headerVisible,
+    layout,
     leftSidebarDisplayMode,
-    leftSidebarInLayout,
     leftSidebarLayoutMode,
     leftSidebarReserveSpace,
     leftSidebarWidth,
@@ -34,7 +36,7 @@ export function LeftSidebar({
       margin={sidebarCardMargin}
       reserveSpace={leftSidebarReserveSpace}
       side="left"
-      visible={leftSidebarInLayout }
+      visible={layout.leftSidebar}
       width={leftSidebarWidth}
     >
         {desktopMode === "sidebar" ?
@@ -43,8 +45,8 @@ export function LeftSidebar({
             title={dictionary.nav.title}
             markerTitle={dictionary.nav.title}
             icon={<LucideTextAlignJustify />}
-            headerExtra={!headerVisible ? <AccountMenu /> : undefined}
-            headerCollapsed={!headerVisible ? <AccountMenu compact /> : undefined}
+            headerExtra={accountInMenu ? <AccountMenu /> : undefined}
+            headerCollapsed={accountInMenu ? <AccountMenu compact /> : undefined}
           >
             <Navigation variant="sidebar" />
           </SidebarItem> : null

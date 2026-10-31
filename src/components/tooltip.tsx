@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createContext, useContext, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
@@ -28,19 +28,13 @@ const TOOLTIP_GAP = 10;
 
 const TooltipContext = createContext<TooltipProviderValue | null>(null);
 
+// Raiz do portal: o `body` no cliente; no servidor não há portal.
+const subscribeToRoot = () => () => {};
+const clientRoot = () => document.body;
+const serverRoot = () => null;
+
 export function TooltipProvider({ children }: { children: React.ReactNode }) {
-  const [root, setRoot] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    const element = document.createElement("div");
-    element.setAttribute("data-tooltip-root", "true");
-    document.body.appendChild(element);
-    setRoot(element);
-
-    return () => {
-      document.body.removeChild(element);
-    };
-  }, []);
+  const root = useSyncExternalStore(subscribeToRoot, clientRoot, serverRoot);
 
   return <TooltipContext.Provider value={{ root }}>{children}</TooltipContext.Provider>;
 }

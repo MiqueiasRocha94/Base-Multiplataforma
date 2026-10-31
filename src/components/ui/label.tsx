@@ -8,5 +8,5 @@ export const Label = React.forwardRef<HTMLLabelElement, React.LabelHTMLAttribute
   { className, ...props },
   ref,
 ) {
-  return <label ref={ref} className={cn("grid gap-2 text-sm", className)} {...props} />;
+  return <label ref={ref} className={cn("grid min-w-0 gap-2 text-sm", className)} {...props} />;
 });

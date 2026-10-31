@@ -42,7 +42,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
           description={dictionary.error.description}
           digest={error.digest}
           actions={[
-            { label: dictionary.error.back, href: "/home", variant: "outline" },
+            { label: dictionary.error.back, href: "/login", variant: "outline" },
             { label: dictionary.error.retry, onClick: () => reset() },
           ]}
         />

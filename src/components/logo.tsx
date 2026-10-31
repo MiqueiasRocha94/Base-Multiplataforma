@@ -2,29 +2,34 @@
 
 import Link from "next/link";
 
-import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
+import { useBrand } from "@/contexts/BrandContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 type LogoProps = {
   className?: string;
   href?: string;
 };
 
-export function Logo({ className, href = "/home" }: LogoProps) {
-  const { dictionary } = useLanguage();
+export function Logo({ className, href = "/login" }: LogoProps) {
+  const { brand } = useBrand();
+  const { user } = useAuth();
+  // O rotulo ao lado da marca reflete a organizacao do usuario; deslogado (ou
+  // sem organizacao), a marca.
+  const label = user?.organization.name || brand.name;
 
   return (
     <Link
       href={href}
-      aria-label={dictionary.appName}
+      aria-label={brand.name}
       className={cn("inline-flex min-w-0 items-center gap-3 rounded-full transition hover:opacity-90", className)}
     >
-      <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary font-semibold text-white shadow-[var(--shadow-soft)]">
-        BM
-      </span>
-      <span className="min-w-0">
-        <span className="block truncate text-base font-semibold tracking-tight text-text">{dictionary.appName}</span>
-      </span>
+      <img
+        src={brand.logo}
+        alt={brand.name}
+        className="h-9 w-auto max-w-[30rem] shrink-0 object-contain"
+      />
+      <span className="block min-w-0 truncate text-base font-semibold tracking-tight">{label}</span>
     </Link>
   );
 }

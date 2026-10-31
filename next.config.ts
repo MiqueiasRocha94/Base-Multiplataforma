@@ -1,49 +1,44 @@
 import type { NextConfig } from "next";
 
 const isMobileBuild = process.env.NEXT_BUILD_TARGET === "mobile";
-// Build web em container: `output: "standalone"` empacota um server Node minimo
-// (.next/standalone/server.js) para uma imagem enxuta. Opt-in por env para nao
-// alterar o build web local padrao. O alvo mobile continua usando `export`.
+// Build web de homologação/produção: `output: "standalone"` empacota um server
+// Node mínimo (.next/standalone/server.js), usado pelo `npm run start` e pela
+// imagem Docker. O alvo mobile usa `export`.
 const useStandalone = process.env.NEXT_OUTPUT_STANDALONE === "true";
+// Raiz do workspace (onde está o node_modules) quando o build roda numa cópia dos
+// fontes dentro do projeto (scripts/build-target.mjs).
+const buildRoot = process.env.NEXT_BUILD_ROOT;
 
-// As ferramentas de dev (painel do sistema + painel de developer mode) so podem
-// existir no ambiente de desenvolvimento explicito. Em qualquer outro build
-// (homolog, producao, ou um `next build` cru sem APP_ENV) os modulos sao
-// trocados por um stub vazio ja na resolucao — o codigo real nao entra no bundle.
-// O alvo usa o alias `@/` (resolvido via tsconfig pelo Turbopack e pelo webpack).
+// @dev-only:start
+// Em dev o navegador chama a API na mesma origem (`devApiBase`) e estes rewrites
+// repassam para `NEXT_PUBLIC_ACESSO_API_URL`: sem CORS, em qualquer porta e pelo
+// IP da rede (localhost:8080 so existe nesta maquina). Mesmos caminhos da API: o
+// cookie de renovacao (`Path=/auth/...`) continua valendo.
 const isDevEnv = process.env.NEXT_PUBLIC_APP_ENV === "development";
-const DEV_TOOLS_STUB = "@/components/dev-tools-stub";
-const devToolModules = [
-  "@/components/system/system-context-panel",
-  "@/components/developer-mode/developer-mode-painel",
-];
+const acessoApiUrl = (process.env.NEXT_PUBLIC_ACESSO_API_URL ?? "").replace(/\/+$/, "");
+const devApiProxyPrefixes = ["/auth", "/private"];
+// @dev-only:end
 
 const nextConfig: NextConfig = {
+  devIndicators: { position: "bottom-left" },
+  // @dev-only:start
+  // Em dev o Next bloqueia requisicoes cross-origin aos assets de dev (/_next, HMR).
+  // Libera IPs de rede local para testar em outro dispositivo (ex.: celular na mesma rede).
+  allowedDevOrigins: ["192.168.*.*", "10.*.*.*", "172.*.*.*"],
+  ...(isDevEnv && acessoApiUrl
+    ? {
+        rewrites: async () =>
+          devApiProxyPrefixes.map((prefix) => ({ source: `${prefix}/:path*`, destination: `${acessoApiUrl}${prefix}/:path*` })),
+      }
+    : {}),
+  // @dev-only:end
   output: isMobileBuild ? "export" : useStandalone ? "standalone" : undefined,
   images: {
     unoptimized: isMobileBuild,
   },
-  // Em dev (Turbopack) nao ha alias; um objeto vazio evita o aviso do Turbopack
-  // sobre `webpack` sem `turbopack`. Fora de dev, troca os modulos pelo stub.
-  turbopack: isDevEnv
-    ? {}
-    : {
-        resolveAlias: Object.fromEntries(devToolModules.map((moduleId) => [moduleId, DEV_TOOLS_STUB])),
-      },
-  // Mesmo alias para quem buildar com `--webpack` (o build padrao usa Turbopack).
-  ...(isDevEnv
-    ? {}
-    : {
-        webpack: (config: { resolve?: { alias?: Record<string, string> } }) => {
-          config.resolve = config.resolve ?? {};
-          config.resolve.alias = {
-            ...(config.resolve.alias ?? {}),
-            // `$` = match exato do especificador (nao pega submodulos).
-            ...Object.fromEntries(devToolModules.map((moduleId) => [`${moduleId}$`, DEV_TOOLS_STUB])),
-          };
-          return config;
-        },
-      }),
+  ...(buildRoot ? { outputFileTracingRoot: buildRoot, turbopack: { root: buildRoot } } : {}),
+  // Source maps do navegador fora dos artefatos (docs/ferramentas-dev.md → "Fora dos artefatos").
+  productionBrowserSourceMaps: false,
 };
 
 export default nextConfig;
