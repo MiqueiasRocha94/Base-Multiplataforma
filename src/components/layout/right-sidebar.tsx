@@ -7,7 +7,7 @@ import { Bug, PanelsTopLeft } from "lucide-react";
 
 import { SidebarItem } from "@/components/sidebar-item";
 import { systemPanelEnabled } from "@/dev-tools/runtime";
-import { DeveloperModePanelContent, SystemContextPanelContent, useDevDictionary } from "@/dev-tools/ui";
+import { DeveloperModePanelContent, SystemContextPanelContent, useDevDictionary, useDeveloperMode } from "@/dev-tools/ui";
 import { useMounted } from "@/hooks/use-mounted";
 // @dev-only:end
 
@@ -20,6 +20,7 @@ export function RightSidebar({
   const mounted = useMounted();
   const devDictionary = useDevDictionary();
   const systemEnabled = mounted ? systemPanelEnabled() : false;
+  const { developerModeEnabled } = useDeveloperMode();
   // @dev-only:end
   const {
     closePanel,
@@ -48,9 +49,11 @@ export function RightSidebar({
                 <SystemContextPanelContent disabled={false} onClose={() => closePanel("system")} />
             </SidebarItem>
         ) : null}
-        <SidebarItem id="developer" title={devDictionary.developer.title} markerTitle={devDictionary.developer.open} icon={<Bug />}>
-            <DeveloperModePanelContent onClose={() => closePanel("developer")} />
-        </SidebarItem>
+        {developerModeEnabled ? (
+            <SidebarItem id="developer" title={devDictionary.developer.title} markerTitle={devDictionary.developer.open} icon={<Bug />}>
+                <DeveloperModePanelContent onClose={() => closePanel("developer")} />
+            </SidebarItem>
+        ) : null}
         {/* @dev-only:end */}
     </Sidebar>
   );
