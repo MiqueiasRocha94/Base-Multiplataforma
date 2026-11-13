@@ -7,6 +7,7 @@ import { ThemeToggleButton } from "@/components/theme-toggle-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { useAutostartSetting } from "@/hooks/use-autostart-setting";
 import { useBiometricSetting } from "@/hooks/use-biometric-setting";
 import { type AppDictionary } from "@/lib/i18n/dictionaries";
 import { fontPresets } from "@/lib/preferences/options";
@@ -199,6 +200,7 @@ export function ProfileConfigFields({
   return (
     <>
       <BiometricConfigField dictionary={dictionary} />
+      <AutostartConfigField dictionary={dictionary} />
 
       <div id="config-language" className="grid gap-3">
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-text-muted">{dictionary.account.languageTitle}</p>
@@ -323,6 +325,45 @@ function BiometricConfigField({ dictionary }: { dictionary: AppDictionary }) {
           onCheckedChange={(checked) => void onCheckedChange(checked)}
         />
         <span className="text-sm text-text-muted">{dictionary.profile.biometricDescription}</span>
+      </div>
+      {error ? <p className="text-sm text-error">{error}</p> : null}
+    </div>
+  );
+}
+
+/** "Iniciar com o sistema" (só no app desktop): grava a entrada de inicialização do SO. */
+function AutostartConfigField({ dictionary }: { dictionary: AppDictionary }) {
+  const autostart = useAutostartSetting();
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  if (!autostart.offerable) {
+    return null;
+  }
+
+  const onCheckedChange = async (checked: boolean) => {
+    setError(null);
+    setBusy(true);
+    try {
+      await autostart.setAutostart(checked);
+    } catch {
+      setError(dictionary.profile.autostartError);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div id="config-autostart" className="grid gap-3">
+      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-text-muted">{dictionary.profile.autostartTitle}</p>
+      <div className="flex items-center gap-3">
+        <Switch
+          checked={autostart.enabled}
+          disabled={busy}
+          aria-label={dictionary.profile.autostartTitle}
+          onCheckedChange={(checked) => void onCheckedChange(checked)}
+        />
+        <span className="text-sm text-text-muted">{dictionary.profile.autostartDescription}</span>
       </div>
       {error ? <p className="text-sm text-error">{error}</p> : null}
     </div>

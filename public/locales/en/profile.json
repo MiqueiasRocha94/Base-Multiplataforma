@@ -35,5 +35,8 @@
   "biometricTitle": "Sign in with biometrics",
   "biometricDescription": "When opening the app, confirm with your fingerprint or face instead of typing the password.",
   "biometricError": "Biometrics could not be confirmed.",
-  "biometricEnableReason": "Confirm your identity to enable biometrics."
+  "biometricEnableReason": "Confirm your identity to enable biometrics.",
+  "autostartTitle": "Start with the system",
+  "autostartDescription": "Open the app automatically when you sign in to the computer.",
+  "autostartError": "Could not change the start with the system setting."
 }

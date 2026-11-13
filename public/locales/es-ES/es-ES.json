@@ -36,7 +36,9 @@
     "cancel": "Cancelar",
     "pressBackAgainToExit": "Toca atrás de nuevo para salir",
     "saved": "Registro guardado.",
-    "deleted": "Registro eliminado."
+    "deleted": "Registro eliminado.",
+    "trayOpen": "Abrir",
+    "trayQuit": "Salir de la app"
   },
   "account": {
     "menuProfile": "Perfil",

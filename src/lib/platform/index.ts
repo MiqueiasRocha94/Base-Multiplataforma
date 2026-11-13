@@ -3,6 +3,7 @@ export * from "@/lib/platform/app-visibility";
 export * from "@/lib/platform/back-button";
 export * from "@/lib/platform/camera";
 export * from "@/lib/platform/capacitor";
+export * from "@/lib/platform/desktop";
 export * from "@/lib/platform/device-info";
 export * from "@/lib/platform/files";
 export * from "@/lib/platform/keyboard";

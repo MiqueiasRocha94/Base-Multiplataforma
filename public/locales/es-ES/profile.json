@@ -35,5 +35,8 @@
   "biometricTitle": "Entrar con biometría",
   "biometricDescription": "Al abrir la app, confirma con la huella o el rostro en lugar de escribir la contraseña.",
   "biometricError": "No fue posible confirmar la biometría.",
-  "biometricEnableReason": "Confirma tu identidad para activar la biometría."
+  "biometricEnableReason": "Confirma tu identidad para activar la biometría.",
+  "autostartTitle": "Iniciar con el sistema",
+  "autostartDescription": "Abrir la app automáticamente al iniciar sesión en el equipo.",
+  "autostartError": "No se pudo cambiar el inicio con el sistema."
 }

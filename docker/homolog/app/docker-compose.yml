@@ -2,9 +2,8 @@
 # Gera o APK release de HOMOLOG reproduzindo o processo de build de produção,
 # SEM ferramentas de desenvolvimento. Ciclo independente da Web — ver ../web/.
 #
-#   docker compose -f docker/homolog/app/docker-compose.yml build app
 #   docker compose -f docker/homolog/app/docker-compose.yml run --rm app
-#     (atalhos: npm run docker:homolog:app[:image])
+#     (atalhos: npm run docker:homolog:app | imagem: npm run docker:image:android)
 #
 # APP_ENV=homolog → docker-apk.mjs roda `npm run apk` (release homolog). O APK
 # nomeado sai em builds/apk/ no host.
@@ -15,8 +14,9 @@ services:
     build:
       # Contexto = raiz do projeto (3 níveis acima deste compose).
       context: ../../..
-      dockerfile: docker/android.Dockerfile
-    image: capacitor-android-toolchain:latest
+      dockerfile: docker/images/android.Dockerfile
+    # Toolchain genérica, compartilhada entre projetos (a tag muda com as versões).
+    image: toolchain-android:jdk21-node22-sdk35
     working_dir: /workspace
     environment:
       APP_ENV: homolog
@@ -32,10 +32,9 @@ services:
       - gradle-cache:/root/.gradle
 
 volumes:
-  # Compartilhados entre TODOS os composes de App (deps e cache do Gradle sao
-  # iguais entre marcas/ambientes). Nome fixo => um unico par, sem prefixo do
-  # projeto, reaproveitado por todos os composes de App (homolog/develop).
+  # Deps do projeto: um volume por projeto, comum aos composes de App dele.
   node_modules:
     name: mpb-node_modules
+  # Cache de download do Gradle: compartilhado entre projetos.
   gradle-cache:
-    name: mpb-gradle-cache
+    name: toolchain-gradle-cache

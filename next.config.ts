@@ -1,9 +1,10 @@
 import type { NextConfig } from "next";
 
-const isMobileBuild = process.env.NEXT_BUILD_TARGET === "mobile";
+// Export estático: app mobile (Capacitor) e app desktop (Tauri) servem `out/` do próprio aparelho.
+const isExportBuild = process.env.NEXT_BUILD_TARGET === "mobile" || process.env.NEXT_BUILD_TARGET === "desktop";
 // Build web de homologação/produção: `output: "standalone"` empacota um server
 // Node mínimo (.next/standalone/server.js), usado pelo `npm run start` e pela
-// imagem Docker. O alvo mobile usa `export`.
+// imagem Docker. Os alvos mobile e desktop usam `export`.
 const useStandalone = process.env.NEXT_OUTPUT_STANDALONE === "true";
 // Raiz do workspace (onde está o node_modules) quando o build roda numa cópia dos
 // fontes dentro do projeto (scripts/build-target.mjs).
@@ -32,9 +33,9 @@ const nextConfig: NextConfig = {
       }
     : {}),
   // @dev-only:end
-  output: isMobileBuild ? "export" : useStandalone ? "standalone" : undefined,
+  output: isExportBuild ? "export" : useStandalone ? "standalone" : undefined,
   images: {
-    unoptimized: isMobileBuild,
+    unoptimized: isExportBuild,
   },
   ...(buildRoot ? { outputFileTracingRoot: buildRoot, turbopack: { root: buildRoot } } : {}),
   // Source maps do navegador fora dos artefatos (docs/ferramentas-dev.md → "Fora dos artefatos").

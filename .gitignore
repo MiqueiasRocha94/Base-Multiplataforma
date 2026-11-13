@@ -69,3 +69,5 @@ next-env.d.ts
 # artefatos da esteira emulada (docker/ci): APK e keystore temporario
 /builds/
 /dist/
+# material das lojas montado (scripts/store/montar-material.mjs); a fonte em store/ é versionada
+/store/build/

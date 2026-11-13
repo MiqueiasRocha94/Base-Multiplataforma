@@ -1,0 +1,5 @@
+# Gerados pelo build desktop (scripts/desktop-build.mjs) e pelo Tauri
+/target/
+/gen/
+/icons/
+/tauri.build.json

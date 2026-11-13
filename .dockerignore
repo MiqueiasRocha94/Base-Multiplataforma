@@ -1,5 +1,5 @@
-# Contexto de build das imagens Docker. Todos os composes em docker/<env>/...
-# usam a raiz do projeto como contexto (context: ../.. relativo ao compose).
+# Contexto de build das imagens Docker. Os composes em docker/<ambiente>/<alvo>/
+# usam a raiz do projeto como contexto (context: ../../..; o desktop usa docker/images).
 # Leva .env.homolog/.env.production — o build web precisa deles para embutir NEXT_PUBLIC_* .
 
 # Dependencias e saidas de build (recriadas dentro do container).

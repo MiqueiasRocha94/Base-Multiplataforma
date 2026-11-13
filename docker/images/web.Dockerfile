@@ -3,8 +3,8 @@
 # o projeto montado em runtime — esta e uma imagem AUTO-CONTIDA e deployavel: faz
 # o `next build` (output standalone) e serve um server Node minimo.
 #
-#   docker compose build web           (npm run web:image)
-#   docker compose up web              (npm run web:up   -> http://localhost:3000)
+#   docker compose -f docker/homolog/web/docker-compose.yml up --build web
+#     (atalhos: npm run docker:homolog:web | npm run docker:production:web)
 #
 # APP_ENV: production (default) | homolog. Define quais .env sao carregados e
 # quais valores NEXT_PUBLIC_* sao embutidos no bundle (inlined em build time).
