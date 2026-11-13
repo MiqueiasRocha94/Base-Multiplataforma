@@ -16,7 +16,7 @@ services:
     build:
       # Contexto = raiz do projeto (3 níveis acima deste compose).
       context: ../../..
-      dockerfile: docker/web.Dockerfile
+      dockerfile: docker/images/web.Dockerfile
       args:
         APP_ENV: homolog
     image: multiplataforma-web:homolog

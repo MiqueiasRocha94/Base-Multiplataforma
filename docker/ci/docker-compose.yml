@@ -3,9 +3,8 @@
 # commitadas): validação → deps:check (só aviso) → build web → build APK. A árvore do
 # host é montada só leitura; segredos e .env reais não entram na cópia.
 #
-#   docker compose -f docker/ci/docker-compose.yml build pipeline
 #   docker compose -f docker/ci/docker-compose.yml run --rm pipeline
-#     (atalhos: npm run docker:ci[:image])
+#     (atalhos: npm run docker:ci | imagem: npm run docker:image:android)
 #
 # Parâmetros (variáveis do host, todas opcionais):
 #   CI_APP_ENV      homolog (padrão) | production
@@ -20,8 +19,8 @@ services:
     build:
       # Contexto = raiz do projeto (2 níveis acima deste compose).
       context: ../..
-      dockerfile: docker/android.Dockerfile
-    image: capacitor-android-toolchain:latest
+      dockerfile: docker/images/android.Dockerfile
+    image: toolchain-android:jdk21-node22-sdk35
     working_dir: /source
     environment:
       CI_APP_ENV: ${CI_APP_ENV:-homolog}
@@ -41,8 +40,8 @@ services:
       - gradle-cache:/root/.gradle
 
 volumes:
+  # Caches de download (npm e Gradle): compartilhados entre projetos.
   npm-cache:
-    name: mpb-ci-npm-cache
-  # O mesmo cache do Gradle dos composes de App (homolog/develop).
+    name: toolchain-npm-cache
   gradle-cache:
-    name: mpb-gradle-cache
+    name: toolchain-gradle-cache

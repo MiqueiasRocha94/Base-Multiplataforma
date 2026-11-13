@@ -1,7 +1,7 @@
 # Imagem de toolchain para gerar APK de apps Capacitor 8.
 # Contem JDK 21 + Node 22 + Android SDK. NAO copia o projeto — ele e montado em
-# runtime (ver docker-compose.yml). Assim a imagem e generica e reutilizavel por
-# varios projetos (mesmo nome de imagem em todos).
+# runtime (composes de docker/<ambiente>/app e docker/ci). Assim a imagem e generica
+# e reutilizavel por varios projetos: nome toolchain-android:<versoes> em todos.
 FROM eclipse-temurin:21-jdk-jammy
 
 ENV DEBIAN_FRONTEND=noninteractive

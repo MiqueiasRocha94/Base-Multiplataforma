@@ -1,0 +1,25 @@
+# Produção · WEB.
+# Mesma imagem auto-contida de homologação (next build standalone + server Node
+# mínimo), com APP_ENV=production e a marca do produto embutida no bundle.
+#
+#   NEXT_PUBLIC_BRAND=<marca> docker compose -f docker/production/web/docker-compose.yml up --build web
+#     (atalhos: npm run docker:production:web[:image|:down])
+#
+# NEXT_PUBLIC_BRAND: marca do app (obrigatória; vira o build-arg BRAND).
+# WEB_PORT: porta publicada no host (default 3000).
+name: mpb-production-web
+
+services:
+  web:
+    build:
+      # Contexto = raiz do projeto (3 níveis acima deste compose).
+      context: ../../..
+      dockerfile: docker/images/web.Dockerfile
+      args:
+        APP_ENV: production
+        BRAND: ${NEXT_PUBLIC_BRAND:?defina NEXT_PUBLIC_BRAND com a marca do app}
+    image: multiplataforma-web:production
+    environment:
+      PORT: 3000
+    ports:
+      - "${WEB_PORT:-3000}:3000"
