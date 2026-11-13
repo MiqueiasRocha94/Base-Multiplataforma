@@ -50,7 +50,11 @@
     "agents:sync": "node scripts/agents/sync-agents.mjs",
     "agents:check": "node scripts/agents/sync-agents.mjs --check",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --test tests/*.test.mjs scripts/store/*.test.mjs scripts/pwa/*.test.mjs",
+    "store:novidades": "node scripts/store/rascunhar-novidades.mjs --idioma pt-BR --versao",
+    "store:montar": "node scripts/store/montar-material.mjs",
+    "store:validar": "node scripts/store/validar-material.mjs",
+    "pwa:validar": "node scripts/pwa/validar-pwa.mjs --manifest public/manifest.webmanifest --public public",
     "docs:src-map": "node scripts/gen-src-map.mjs",
     "deps:check": "node ./scripts/deps-outdated.mjs",
     "ci:run": "node ./scripts/ci.mjs"
