@@ -36,7 +36,9 @@
     "cancel": "Cancel",
     "pressBackAgainToExit": "Press back again to exit",
     "saved": "Record saved.",
-    "deleted": "Record deleted."
+    "deleted": "Record deleted.",
+    "trayOpen": "Open",
+    "trayQuit": "Quit app"
   },
   "account": {
     "menuProfile": "Profile",

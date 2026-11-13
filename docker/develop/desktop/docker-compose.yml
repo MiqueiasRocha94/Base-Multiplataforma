@@ -1,0 +1,72 @@
+# Desenvolvimento · DESKTOP (Tauri 2), um serviço por sistema. O build inteiro roda no
+# container (export do Next + compilação), com --env=development fixo e os demais
+# parâmetros repassados ao scripts/docker-desktop.mjs:
+#
+#   docker compose -f docker/develop/desktop/docker-compose.yml run --rm windows [--debug] [--exe-only]
+#     (atalhos: npm run docker:develop:desktop:windows | npm run docker:develop:desktop:linux;
+#      imagens: npm run docker:image:desktop:windows | npm run docker:image:desktop:linux)
+#
+# Parâmetros: --debug (build debug, com DevTools), --exe-only (só o .exe do Windows, sem instalador).
+# `windows` usa a imagem enxuta (cargo-xwin + NSIS); `linux` acrescenta WebKitGTK/GTK
+# e também compila o Windows. O scripts/desktop-build.mjs no host (npm run desktop:debug)
+# usa estes serviços só para a compilação (--entrypoint sh).
+# Os artefatos saem em builds/desktop/ no host.
+name: mpb-develop-desktop
+
+x-toolchain: &toolchain
+  working_dir: /src
+  environment:
+    CARGO_TARGET_DIR: /target
+    # cargo-xwin baixa o CRT/SDK da Microsoft: a licença deles está aceita
+    # pelo responsável do projeto para o build Windows.
+    XWIN_ACCEPT_LICENSE: "1"
+    # Marca do app (opcional fora de produção).
+    NEXT_PUBLIC_BRAND: ${NEXT_PUBLIC_BRAND:-}
+    # AppImage no container: sem FUSE (extrai e roda) e sem o strip do
+    # linuxdeploy, que não reconhece as bibliotecas do trixie.
+    APPIMAGE_EXTRACT_AND_RUN: "1"
+    NO_STRIP: "true"
+  volumes:
+    - ../../..:/src
+    - node_modules:/src/node_modules
+    - cargo-registry:/usr/local/cargo/registry
+    - target:/target
+    - xwin-cache:/root/.cache/cargo-xwin
+    - tauri-cache:/root/.cache/tauri
+
+services:
+  windows:
+    <<: *toolchain
+    build:
+      # Contexto = docker/images (a imagem não copia o projeto; contexto pequeno
+      # evita varrer a raiz pelo compartilhamento de arquivos do Docker no Windows).
+      context: ../../images
+      dockerfile: desktop.Dockerfile
+      target: windows
+    # Toolchain genérica, compartilhada entre projetos (a tag muda com as versões).
+    image: toolchain-tauri:rust1.99-node22-windows
+    entrypoint: ["node", "scripts/docker-desktop.mjs", "--platform=windows", "--env=development"]
+
+  linux:
+    <<: *toolchain
+    build:
+      context: ../../images
+      dockerfile: desktop.Dockerfile
+      target: linux
+    image: toolchain-tauri:rust1.99-node22-linux
+    entrypoint: ["node", "scripts/docker-desktop.mjs", "--platform=linux", "--env=development"]
+
+volumes:
+  # Por projeto: deps Linux do container (separadas do node_modules do host) e a
+  # saída do cargo, comuns aos composes desktop do projeto.
+  node_modules:
+    name: mpb-desktop-node_modules
+  target:
+    name: mpb-desktop-target
+  # Caches de download: compartilhados entre projetos.
+  cargo-registry:
+    name: toolchain-cargo-registry
+  xwin-cache:
+    name: toolchain-xwin-cache
+  tauri-cache:
+    name: toolchain-tauri-cache

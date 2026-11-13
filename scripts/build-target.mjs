@@ -15,6 +15,8 @@ const envArg = process.argv.find((arg) => arg.startsWith("--env="));
 const appEnv = normalizeAppEnv(envArg?.slice("--env=".length), "production");
 
 const isMobileTarget = target === "mobile";
+// Mobile (Capacitor) e desktop (Tauri, src-tauri/) empacotam o mesmo export estático em `out/`.
+const isExportTarget = isMobileTarget || target === "desktop";
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(currentDir, "..");
 const nextBin = path.join(projectRoot, "node_modules", "next", "dist", "bin", "next");
@@ -93,13 +95,13 @@ function clearDir(dir) {
 }
 
 /**
- * Build de desenvolvimento: web com os fontes como estão; mobile (APK debug) numa
- * cópia com todas as páginas, menos o que o export não aceita, com `out/` copiado
- * de volta para o projeto. O pacote do `npm run dev` (app-update-dev.mjs) usa
- * cópia e saída próprias (`BUILD_SOURCE_DIR`, `MOBILE_OUT_DIR`).
+ * Build de desenvolvimento: web com os fontes como estão; export (APK debug, app
+ * desktop) numa cópia com todas as páginas, menos o que o export não aceita, com
+ * `out/` copiado de volta para o projeto. O pacote do `npm run dev`
+ * (app-update-dev.mjs) usa cópia e saída próprias (`BUILD_SOURCE_DIR`, `MOBILE_OUT_DIR`).
  */
 function buildDevelopment() {
-  if (!isMobileTarget) {
+  if (!isExportTarget) {
     return run([nextBin, "build"], buildEnv());
   }
   const { root, cleanup } = copyBuildSource(process.env.BUILD_SOURCE_DIR || undefined);
@@ -123,9 +125,10 @@ function buildEnv(extra = {}) {
     __NEXT_PROCESSED_ENV: "true",
     APP_ENV: appEnv,
     NEXT_PUBLIC_APP_ENV: appEnv,
-    NEXT_BUILD_TARGET: isMobileTarget ? "mobile" : "web",
-    // O app lê o alvo para restringir menu e gate às páginas publicadas (src/lib/auth/mobile-release.ts).
-    NEXT_PUBLIC_BUILD_TARGET: isMobileTarget ? "mobile" : "web",
+    NEXT_BUILD_TARGET: isExportTarget ? target : "web",
+    // O app lê o alvo para restringir menu e gate às páginas publicadas (src/lib/auth/mobile-release.ts);
+    // só `mobile` restringe: o desktop leva todas as páginas, como a web.
+    NEXT_PUBLIC_BUILD_TARGET: isExportTarget ? target : "web",
     ...extra,
   };
   // As variáveis do recurso só chegam ao bundle quando ele é mantido.
@@ -171,12 +174,14 @@ function buildDistribution() {
   try {
     if (isMobileTarget) {
       stripUnreleasedPages(root);
+    } else if (isExportTarget) {
+      stripExportIncompatible(root);
     }
     // `.next` novo: nada de cache de outro build ou do dev.
     clearDir(path.join(root, ".next"));
     const status = run(
       [nextBin, "build"],
-      buildEnv({ NEXT_BUILD_ROOT: projectRoot, ...(isMobileTarget ? {} : { NEXT_OUTPUT_STANDALONE: "true" }) }),
+      buildEnv({ NEXT_BUILD_ROOT: projectRoot, ...(isExportTarget ? {} : { NEXT_OUTPUT_STANDALONE: "true" }) }),
       root,
     );
     if (status !== 0) {
@@ -184,7 +189,7 @@ function buildDistribution() {
     }
 
     let artifact;
-    if (isMobileTarget) {
+    if (isExportTarget) {
       artifact = path.join(projectRoot, "out");
       if (root !== projectRoot) replaceDir(path.join(root, "out"), artifact);
     } else {

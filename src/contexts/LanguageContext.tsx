@@ -11,6 +11,7 @@ import {
   type LazyNamespaceKey,
 } from "@/lib/i18n/dictionaries";
 import { defaultLocale, enabledLocales, type AppLocale } from "@/lib/i18n/settings";
+import { setTrayLabels } from "@/lib/platform/desktop";
 import { getStorageItem, setStorageItem, storageKeys } from "@/lib/platform/storage";
 
 type LanguageContextValue = {
@@ -58,6 +59,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     if (i18n.resolvedLanguage !== locale) {
       void i18n.changeLanguage(locale);
     }
+  }, [locale]);
+
+  // App desktop: menu da bandeja (nativo) no idioma do app; no-op fora dele.
+  useEffect(() => {
+    const { trayOpen, trayQuit } = getDictionary(locale).common;
+    void setTrayLabels(trayOpen, trayQuit);
   }, [locale]);
 
   // Namespaces pedidos por componentes fora da rota dona (useLazyNamespace).
