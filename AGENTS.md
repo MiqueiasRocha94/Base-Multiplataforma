@@ -224,6 +224,9 @@ recursos quebram regras do sistema (captcha, TLS, permissões, dados). Recurso d
 - Criou/moveu/removeu arquivo em `src/` → `npm run docs:src-map` e descrever os itens `(descrever)` no
   [mapa de src](docs/./mapa-src.md).
 - Mudança de docs: links relativos válidos e `npm run agents:check` passando.
+- **README da raiz em dia:** toda mudança que altera requisitos, alvos, comandos (`package.json`), pastas da raiz,
+  stack ou docs do índice confere o [README.md](docs/../README.md) e o corrige junto, pelo mesmo fluxo dos docs; a
+  entrega diz se ele foi conferido.
 - Não alterar testes, expectativas ou regras de checagem para esconder falha; separar falha introduzida, falha
   preexistente e limitação do ambiente.
 - O que não foi verificado é dito explicitamente na entrega; nunca afirmar teste ou verificação que não foi executada.
