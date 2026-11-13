@@ -10,6 +10,8 @@ import { fileURLToPath } from "node:url";
 //   .cursor/rules/fonte-unica.mdc   -> alwaysApply com referencias @docs/README.md e @docs/conduta-agentes.md
 //   .claude/rules/*.md (paths), .cursor/rules/*.mdc (globs), .github/instructions/*.instructions.md (applyTo)
 //                                   -> cada rule de .agents/rules/ no formato da ferramenta
+// Com o campo "kit" em .agents/recursos-kit.json (gravado na instalacao ou no reparo do Agent Docs Kit), as entradas
+// ganham, logo abaixo do cabecalho, a linha "<!-- Agent Docs Kit <versao> — <modo> em <data> -->".
 // Uso: node scripts/agents/sync-agents.mjs [--check]
 //   --check: nao grava; falha (codigo 1) se algum gerado estiver defasado ou sobrando.
 // Copia em ESM do gerador do agent-docs-kit (templates/common/scripts/agents/sync-agents.js).
@@ -24,6 +26,9 @@ const IMPORTS = ["@docs/README.md", "@docs/conduta-agentes.md"];
 
 // Fonte incorporada onde a ferramenta nao aceita import.
 const CONDUTA = "docs/conduta-agentes.md";
+
+const RECURSOS_KIT = ".agents/recursos-kit.json";
+const MODOS_KIT = ["instalação", "reparo"];
 
 // Pastas onde cada rule vira um arquivo; arquivos com a MARCA que nao forem gerados sao removidos.
 const PASTAS_RULES = [
@@ -91,10 +96,39 @@ function codigo(texto) {
   return "`" + texto + "`";
 }
 
+// Versao, modo e data do Agent Docs Kit aplicados ao projeto; "" sem o arquivo ou sem o campo "kit". A data vem do
+// arquivo, nao do relogio, para o --check nao mudar de um dia para o outro.
+function linhaDoKit() {
+  if (!fs.existsSync(path.join(workspaceRoot, RECURSOS_KIT))) {
+    return "";
+  }
+  let dados;
+  try {
+    dados = JSON.parse(ler(RECURSOS_KIT));
+  } catch (erro) {
+    throw new Error(`${RECURSOS_KIT}: JSON invalido (${erro.message})`);
+  }
+  const kit = dados && dados.kit;
+  if (!kit) {
+    return "";
+  }
+  const { versao, data, modo } = kit;
+  if (typeof versao !== "string" || !versao || !/^\d{4}-\d{2}-\d{2}$/.test(data || "") || !MODOS_KIT.includes(modo)) {
+    throw new Error(`${RECURSOS_KIT}: o campo kit exige versao, data (AAAA-MM-DD) e modo (${MODOS_KIT.join(" ou ")})`);
+  }
+  return `<!-- Agent Docs Kit ${versao} — ${modo} em ${data} -->`;
+}
+
+// Cabecalho das entradas: a MARCA e, se houver, a linha do kit.
+function cabecalho() {
+  const kit = linhaDoKit();
+  return kit ? `${MARCA_MD}\n${kit}` : MARCA_MD;
+}
+
 // Entrada das ferramentas sem import (Codex, Copilot): encaminhamento + conduta incorporada + indice das rules.
 function entradaIncorporada(rules, raiz) {
   let texto = [
-    MARCA_MD,
+    cabecalho(),
     "",
     `> Fonte única das orientações deste projeto: [docs/README.md](${raiz}docs/README.md) (ordem inicial de leitura e`,
     `> índice). A conduta abaixo é cópia gerada de [${CONDUTA}](${raiz}${CONDUTA}); não edite aqui.`,
@@ -126,7 +160,7 @@ function fonteUnicaCursor() {
     "alwaysApply: true",
     "---",
     "",
-    MARCA_MD,
+    cabecalho(),
     "",
     "Leia antes de qualquer tarefa: @docs/README.md (ordem inicial de leitura) e @docs/conduta-agentes.md (conduta",
     `obrigatória). As orientações deste projeto ficam só em ${codigo("docs/")}.`,
@@ -137,7 +171,7 @@ function fonteUnicaCursor() {
 function gerados() {
   const rules = lerRules();
   const arquivos = {};
-  const importa = `${MARCA_MD}\n\n${IMPORTS.join("\n")}\n`;
+  const importa = `${cabecalho()}\n\n${IMPORTS.join("\n")}\n`;
 
   arquivos["CLAUDE.md"] = importa;
   arquivos["GEMINI.md"] = importa;
