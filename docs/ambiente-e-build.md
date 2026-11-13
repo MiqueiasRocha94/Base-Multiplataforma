@@ -7,7 +7,8 @@ Instalar, rodar, configurar ambientes e gerar os artefatos (web, APK, Docker).
 - Node.js **>= 22** (ver `.nvmrc` e `engines` no `package.json`) e npm 10+
 - Android local: Android Studio / Android SDK (e JDK 21 para o Gradle)
 - iOS: macOS com Xcode
-- Docker (opcional): build de web e de APK em container
+- Docker: obrigatório para o app desktop, que compila sempre no container de toolchain (sem Rust na máquina;
+  [Build desktop (Tauri)](#build-desktop-tauri)); opcional para o build de web e de APK em container
 
 ## Rodar (web)
 

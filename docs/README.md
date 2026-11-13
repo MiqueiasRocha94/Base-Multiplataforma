@@ -124,7 +124,7 @@ Antes de qualquer tarefa:
 | spec de mudança, `.agents/specs` | [conduta](./conduta-agentes.md) | Especificação de mudança |
 | pendência, issue, GitHub | [conduta](./conduta-agentes.md) | Pendências compartilhadas |
 | reaproveitar, módulo dono, `@ts-ignore`, segurança | [conduta](./conduta-agentes.md) | Regras de implementação |
-| validação, entrega, `ESTADO.md` | [conduta](./conduta-agentes.md) | Validação, Entrega |
+| validação, entrega, `ESTADO.md`, README da raiz em dia | [conduta](./conduta-agentes.md) | Validação, Entrega |
 | pedido de tarefa, revisão, PR template | [conduta](./conduta-agentes.md) | Como pedir uma tarefa, Como revisar o resultado |
 | handoff, backend, `AGENTE-BACKEND-PENDENCIAS`, guia do backend | [conduta](./conduta-agentes.md) | Comunicação entre projetos |
 | `CLAUDE.md`, `AGENTS.md`, `agents:sync`, `agents:check`, rules | [conduta](./conduta-agentes.md) | Instruções de agentes |

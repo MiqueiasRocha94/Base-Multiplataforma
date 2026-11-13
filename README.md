@@ -23,7 +23,8 @@ construído sobre ela e consome a sua própria API ([comunicação com a API](./
 - Node.js **>= 22** (`.nvmrc`) e npm
 - Android Studio / Android SDK (e JDK 21 para o Gradle), para o APK local
 - macOS com Xcode, para iOS
-- Docker (opcional), para os builds de web e APK em contêiner
+- Docker, obrigatório para o app desktop (`.exe`/instalador e `.deb`/`.AppImage` compilam no contêiner, sem Rust
+  na máquina) e opcional para os builds de web e APK em contêiner
 - Nenhum backend em desenvolvimento: sem as variáveis de API, login e telas usam o `dev-backend`
 
 ## 2. Início rápido
@@ -48,7 +49,8 @@ src/dev-tools/           recursos só de desenvolvimento (ausentes dos artefatos
 src/lib/ src/hooks/      helpers, plataforma nativa, auth, navegação; hooks compartilhados
 public/                  estáticos, locales, marcas, diagramas dos docs
 docker/                  imagens (images/) e composes por ambiente (develop, homolog, production)
-scripts/                 build, verificações e o gerador das instruções de agentes
+src-tauri/               casca do app desktop (Tauri 2, Rust): janela, bandeja, plugins
+scripts/                 build, verificações, material das lojas, validador do PWA e o gerador das instruções de agentes
 docs/                    documentação permanente (índice em docs/README.md)
 .agents/                 rules por caminho, specs de mudança e prompts de agentes
 ```
