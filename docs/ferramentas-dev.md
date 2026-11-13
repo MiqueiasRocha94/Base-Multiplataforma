@@ -142,7 +142,7 @@ já sem o código de dev. Os fontes originais não mudam.
 | `npm run dev` | nenhuma — tudo de dev disponível | — |
 | `npm run start` / `production` | cópia em `.dist-build`, apagada no fim | `dist/web`; servido por [serve-dist.mjs](../scripts/serve-dist.mjs) |
 | APK homolog/produção (`npm run apk*`, também no container) | cópia em `.dist-build`; `android/.../assets/public` limpo antes do `cap sync`; Gradle `clean assembleRelease` | `out/` antes do sync e o `.apk` final (descompactado) |
-| Imagem Docker web | **etapa `strip`** do [web.Dockerfile](../docker/web.Dockerfile): `prepare-dist-source.mjs --in-place` no contexto copiado (só aceito sem `.git`, ou seja, dentro da imagem); a lista de identificadores é salva antes da remoção | `dist/web`, que é o que a imagem final copia |
+| Imagem Docker web | **etapa `strip`** do [web.Dockerfile](../docker/images/web.Dockerfile): `prepare-dist-source.mjs --in-place` no contexto copiado (só aceito sem `.git`, ou seja, dentro da imagem); a lista de identificadores é salva antes da remoção | `dist/web`, que é o que a imagem final copia |
 | CI (quando existir) | os mesmos scripts — nenhum fluxo de homolog/produção chama `next build` direto | idem |
 
 O mesmo mecanismo (pasta removida inteira, regiões marcadas, imports restritos e

@@ -23,7 +23,7 @@ Comandos úteis:
 ```bash
 npm run typecheck        # tsc --noEmit
 npm run lint             # ESLint (eslint .)
-npm test                 # node --test tests/*.test.mjs
+npm test                 # node --test (tests/ + scripts de lojas e PWA)
 npm run check:arch       # fronteiras de src/ + sincronia de .agents e do mapa de src
 npm run env:check        # valida flags de ambiente
 npm run start            # build (homolog) sem o código de dev → dist/web + serve
@@ -190,6 +190,76 @@ sufixo do ambiente (`com.multiplataforma.base.homolog`), para o app de teste con
   `ANDROID_KEYSTORE_*` no ambiente). Sem ele o build falha; produção nunca usa keystore gerado. Homologação gera e
   reaproveita o próprio keystore.
 
+## Build desktop (Tauri)
+
+O app desktop (casca em [src-tauri/](../src-tauri), [plataforma nativa](./plataforma-nativa.md) → "Desktop
+(Tauri)") empacota o mesmo export estático do mobile (`out/`) para **Windows x64** (instalador NSIS) e **Linux
+x64** (`.deb` e `.AppImage`). Compila **só no container**
+([desktop.Dockerfile](../docker/images/desktop.Dockerfile), um compose por ambiente em
+`docker/<develop|homolog|production>/desktop/`, ver [Build em Docker](#build-em-docker)): Rust, cargo-xwin, NSIS
+e WebKitGTK não são instalados na máquina.
+
+```bash
+npm run docker:image:desktop:windows   # imagem Windows (1ª vez ou ao mudar o Dockerfile)
+npm run docker:image:desktop:linux     # imagem Linux (inclui a do Windows)
+npm run desktop:debug                  # development, build debug (com DevTools)
+npm run desktop -- --exe-only          # homologação, só o .exe do Windows (dia a dia)
+npm run desktop                        # homologação, instalador NSIS
+npm run desktop:production             # produção, instalador (exige NEXT_PUBLIC_BRAND)
+npm run docker:homolog:desktop:windows -- --exe-only   # pipeline inteiro no container, só Windows
+npm run docker:production:desktop:linux                # pipeline inteiro no container, só Linux
+```
+
+- **Imagens:** o [desktop.Dockerfile](../docker/images/desktop.Dockerfile) tem dois estágios. `windows` é enxuto
+  (cargo-xwin + NSIS, com um `.pc` mínimo da biblioteca de bandeja para o bundler); `linux` acrescenta
+  WebKitGTK/GTK, que são a parte demorada da imagem, e também compila o Windows. Cada serviço do compose
+  (`windows`, `linux`) usa o seu estágio; os composes dos três ambientes usam as mesmas imagens e volumes.
+- **Onde roda:** `npm run desktop*` faz o export do Next no host e só compila no container do compose do ambiente
+  (serviço `windows` com `--platform=windows`, senão `linux`); `npm run docker:<ambiente>:desktop:<sistema>` roda
+  o pipeline inteiro no container ([scripts/docker-desktop.mjs](../scripts/docker-desktop.mjs), `node_modules`
+  Linux num volume próprio), sem depender do Node do host. O ambiente e o sistema vêm do compose e do serviço;
+  parâmetros: `--debug` (em develop) e `--exe-only`.
+- **Sistema (fluxo pelo host):** `--platform=windows|linux|all` (padrão `windows`), ex.:
+  `npm run desktop -- --platform=all`.
+- **Só o `.exe` (`--exe-only`):** `cargo tauri build --no-bundle`, sem o NSIS nem os downloads do bundler; sai
+  `<Nome>-<ambiente>-…-windows.exe`. Só com `--platform=windows` e fora de produção: produção gera só
+  instalador.
+- **Licença da Microsoft:** o build Windows baixa o CRT/SDK da Microsoft (cargo-xwin); a licença está aceita no
+  compose (`XWIN_ACCEPT_LICENSE: "1"`).
+- **Perfil release:** produção usa o perfil de [src-tauri/Cargo.toml](../src-tauri/Cargo.toml) (LTO completo,
+  `codegen-units = 1`); homologação e development usam LTO `thin` e 16 codegen units, porque o link com LTO
+  completo é single-thread e pesado em RAM. `src-tauri/Cargo.lock` é versionado (dependências fixas).
+- **Tempos:** a 1ª execução baixa crates, o CRT/SDK da Microsoft (~1 GB) e compila todas as dependências do
+  Tauri, com longos trechos sem saída. Para achar onde parou: `docker stats` em outro terminal e, num shell do
+  container (`docker compose -f docker/develop/desktop/docker-compose.yml run --rm --entrypoint sh windows`), rodar em
+  `/src/src-tauri` os passos separados (`cargo xwin check --target x86_64-pc-windows-msvc`, depois o
+  `cargo tauri build --no-bundle`). Exit 137 é falta de memória no Docker Desktop/WSL2.
+- **Pipeline** ([scripts/desktop-build.mjs](../scripts/desktop-build.mjs)): carregar env → identidade da marca →
+  export (`build-target.mjs desktop`, que valida o env e verifica o `out/` em homologação/produção, como no
+  mobile) → ícones e config do Tauri da marca → `cargo tauri build` no container → artefatos nomeados
+  (`<Nome>-<ambiente>-n<nativa>-a<aplicação>-<data>-{windows.exe,windows-setup.exe,linux.deb,linux.AppImage}`) em
+  `builds/desktop/`.
+- **Páginas:** todas, como a web. O alvo passa `NEXT_PUBLIC_BUILD_TARGET=desktop`; a lista de
+  [Páginas publicadas no app](#páginas-publicadas-no-app) vale só para `mobile`. Sai só o que o export não aceita
+  (rotas dinâmicas, rotas de API, catch-all).
+- **Identidade por marca:** [scripts/desktop-apps.json](../scripts/desktop-apps.json) (`appId`, nome) com a
+  versão nativa própria do desktop (`nativeVersion`). Fora de produção o identificador leva o sufixo do ambiente
+  (`com.multiplataforma.base.homolog`), para o app de teste conviver com o publicado. Ícones gerados a partir do
+  mesmo ícone da marca do APK (`public/brands/<marca>/icon` → `favicon` → `logo`), só quando a marca ou o ícone
+  de origem mudam (`src-tauri/icons/.source`); o `tauri.build.json` só é regravado se mudar. Assim o `build.rs`
+  do Tauri não recompila o app a cada build. Para forçar, apagar `src-tauri/icons/`.
+- **CSP:** a de [src-tauri/tauri.conf.json](../src-tauri/tauri.conf.json), com as origens de
+  `NEXT_PUBLIC_ACESSO_API_URL` e `NEXT_PUBLIC_API_BASE_URL` acrescentadas ao `connect-src` no build. O Tauri
+  injeta hashes no `script-src`, mas não no `style-src` (`dangerousDisableAssetCspModification: ["style-src"]`):
+  com hash, o navegador ignora o `'unsafe-inline'` e bloqueia os `<style>` criados em runtime (cores dos
+  gráficos em [chart.tsx](../src/components/ui/chart.tsx)).
+- **Gerados (fora do git):** `src-tauri/{target,gen,icons}/` e `src-tauri/tauri.build.json`.
+- **Fora do escopo atual:** macOS (exige máquina macOS), assinatura de código (o Windows mostra o aviso do
+  SmartScreen), atualização automática e lojas; a esteira não gera os instaladores.
+- **API real:** o backend precisa aceitar a origem do app (`http://tauri.localhost` no Windows,
+  `tauri://localhost` no Linux) no CORS e o login sem atestado de app; o Turnstile precisa aceitar o hostname do
+  app.
+
 ## Atualização remota do app
 
 O app mobile pode receber **pacotes web assinados** (o `out/` do build: HTML, CSS, JS e assets) sem nova versão de
@@ -235,7 +305,7 @@ O APK de release não aceita HTTP sem TLS: o canal precisa ser servido por HTTPS
 1. `APP_UPDATE_ENABLED=true NEXT_PUBLIC_APP_UPDATE_URL=<url> npm run app-update:bundle -- --env=<homolog|production>`
    (com `NEXT_PUBLIC_BRAND` em produção): build mobile com o recurso, `out/` verificado, zip assinado e
    `manifest.json` em `dist/app-updates/` ([app-update-bundle.mjs](../scripts/app-update-bundle.mjs)).
-2. Build da imagem web do mesmo canal: o [web.Dockerfile](../docker/web.Dockerfile) confere se o pacote é do canal e da
+2. Build da imagem web do mesmo canal: o [web.Dockerfile](../docker/images/web.Dockerfile) confere se o pacote é do canal e da
    versão da imagem e o serve em `/app-updates/`. Sem pacote, a pasta fica vazia. A chave fica no host, fora da imagem.
 
 **No app:** ao abrir, o `AppUpdateGate` confirma o pacote atual, consulta o manifesto e baixa o pacote novo, que vale na
@@ -284,46 +354,57 @@ Este pacote nunca é publicado: é de desenvolvimento e leva o código de dev.
 
 ## Build em Docker
 
-A matriz de deploy é **marca × alvo (web/APK) × ambiente**. A configuração fica
-em [docker/](../docker), organizada por **ambiente → (marca) → aplicação**. Web e
-App têm ciclos de build independentes, então **não** compartilham compose. Duas
-imagens (compartilhadas entre os composes): [web.Dockerfile](../docker/web.Dockerfile)
-(auto-contida, `next build` standalone, serve um server Node mínimo) e
-[android.Dockerfile](../docker/android.Dockerfile) (toolchain JDK 21 + Node 22 +
-Android SDK, monta o projeto em runtime, APK em `builds/apk/`).
+A matriz de deploy é **alvo (web/APK/desktop) × ambiente**, com a marca como parâmetro. A configuração fica em
+[docker/](../docker): os Dockerfiles em `docker/images/` e um compose por **ambiente → alvo**. Web, App e desktop
+têm ciclos de build independentes, então **não** compartilham compose. Imagens:
+
+| Dockerfile | Imagem | Tipo |
+| --- | --- | --- |
+| [web.Dockerfile](../docker/images/web.Dockerfile) | `multiplataforma-web:<ambiente>` | auto-contida e deployável (`next build` standalone + server Node mínimo); por projeto |
+| [android.Dockerfile](../docker/images/android.Dockerfile) | `toolchain-android:jdk21-node22-sdk35` | toolchain (JDK 21 + Node 22 + Android SDK), projeto montado em runtime, APK em `builds/apk/` |
+| [desktop.Dockerfile](../docker/images/desktop.Dockerfile) | `toolchain-tauri:rust1.99-node22-{windows,linux}` | toolchain do app desktop ([Build desktop (Tauri)](#build-desktop-tauri)) |
 
 ```
 docker/
+├── images/                         # Dockerfiles (web, android, desktop)
+├── develop/
+│   ├── app/docker-compose.yml      # APK debug (a Web em dev roda via `npm run dev`)
+│   └── desktop/docker-compose.yml  # .exe/instaladores de development (debug)
 ├── homolog/
 │   ├── web/docker-compose.yml
-│   └── app/docker-compose.yml
-├── develop/
-│   └── docker-compose.yml    # SÓ o App (a Web em dev roda via `npm run dev`)
-└── ci/
-    └── docker-compose.yml    # esteira emulada (ver "Esteira (CI)")
+│   ├── app/docker-compose.yml
+│   └── desktop/docker-compose.yml
+├── production/
+│   ├── web/docker-compose.yml      # imagem web de produção
+│   └── desktop/docker-compose.yml  # instaladores Windows (NSIS) e Linux (.deb/.AppImage)
+└── ci/docker-compose.yml           # esteira emulada (ver "Esteira (CI)")
 ```
 
 ```bash
-# Homolog (reproduz o build de produção, sem ferramentas de dev)
-npm run docker:homolog:web                 # sobe a web -> http://localhost:3000
-npm run docker:homolog:app                 # gera o APK release de homolog
-
-# Develop — só o App (APK debug, com painel + devtools)
-npm run docker:develop:app
+npm run docker:image:android               # imagem de toolchain do APK (1ª vez ou ao mudar o Dockerfile)
+npm run docker:develop:app                 # APK debug (com painel + devtools)
+npm run docker:homolog:web                 # sobe a web de homolog -> http://localhost:3000
+npm run docker:homolog:app                 # APK release de homolog
+NEXT_PUBLIC_BRAND=<marca> npm run docker:production:web   # sobe a web de produção da marca
 ```
 
-**Produção por marca:** a base não traz composes de produção. Cada produto cria
-`docker/production/<marca>/{web,app}/docker-compose.yml` a partir dos de
-homolog, com `APP_ENV=production` e o build-arg `BRAND=<marca>` fixos no compose
-(a marca vira `NEXT_PUBLIC_BRAND`, ver [tema e marca](./tema-marca-e-idioma.md)
-→ "Marca"), e os scripts `docker:prod:<marca>:*` no `package.json`.
+**Imagens e caches compartilhados entre projetos.** As toolchains (`toolchain-android`, `toolchain-tauri`) não
+levam nada do projeto: o nome é genérico e a tag traz as versões da toolchain. Outro projeto com a mesma toolchain
+usa a mesma imagem em vez de criar uma igual; quando uma versão muda (ex.: Rust), muda a tag, e um projeto não
+sobrescreve a imagem de outro. Os caches de download também são comuns (`toolchain-cargo-registry`,
+`toolchain-xwin-cache`, `toolchain-tauri-cache`, `toolchain-gradle-cache`, `toolchain-npm-cache`). Ficam **por
+projeto**, com o prefixo `mpb-`, só o que depende do código: `node_modules` (`mpb-node_modules`,
+`mpb-desktop-node_modules`), a saída do cargo (`mpb-desktop-target`) e a imagem web.
 
-- Padrão: `docker:prod:<marca>:{web,app}`; cada um com `:image` (só `build`) e, na
-  web, `:down` (`compose down`). Homolog/develop não têm marca.
+**Produção:** `docker/production` gera a **web** e os **instaladores desktop** (Windows NSIS; Linux `.deb` e
+`.AppImage`). A marca vem de `NEXT_PUBLIC_BRAND`, obrigatória: o compose falha sem ela (na web vira o build-arg
+`BRAND`, inlined no bundle; ver [tema e marca](./tema-marca-e-idioma.md) → "Marca"). Homolog/develop usam o
+default. Android e iOS de produção **não** têm compose na base: a publicação nas lojas segue outra via (Expo ou
+equivalente; iOS exige macOS).
+
+- Scripts: `docker:<ambiente>:<alvo>` (`web`, `app`, `desktop:windows`, `desktop:linux`); a web tem
+  `:image` (só `build`) e `:down` (`compose down`). Imagens de toolchain: `docker:image:*`.
 - `WEB_PORT` (env do host): porta publicada da web (default `3000`).
-- Cada compose de produção fixa a marca via `BRAND` → `NEXT_PUBLIC_BRAND`, inlined
-  no bundle ([tema e marca](./tema-marca-e-idioma.md) → "Marca"). Homolog/develop
-  usam o default.
 - Em develop **não** há Docker para a Web — use `npm run dev` (Turbopack/hot reload).
 
 ## Verificações e testes
@@ -332,7 +413,8 @@ homolog, com `APP_ENV=production` e o build-arg `BRAND=<marca>` fixos no compose
 | --- | --- |
 | `npm run typecheck` | `tsc --noEmit` no projeto inteiro |
 | `npm run lint` | ESLint, inclusive as regras de fronteira ([enforcement](./enforcement-arquitetura.md)) |
-| `npm test` | `node --test tests/*.test.mjs`: 16 suítes de lógica pura (`account-placement`, `app-env`, `app-update`, `app-update-dev`, `ci`, `cliente-logout`, `date-field`, `deps-outdated`, `dev-only`, `dev-webcrypto`, `http`, `layout`, `mobile-app`, `mobile-release`, `module-engine`, `navigation-pins`) |
+| `npm test` | `node --test`: 19 suítes de lógica pura em `tests/` (`account-placement`, `app-env`, `app-update`, `app-update-dev`, `ci`, `cliente-logout`, `date-field`, `deps-outdated`, `dev-only`, `dev-webcrypto`, `http`, `layout`, `mobile-app`, `mobile-release`, `module-engine`, `navigation-pins`, `release-history`, `toast-confirm`, `verify-dist`) + os testes dos scripts de lojas e PWA (`scripts/store/*.test.mjs`, `scripts/pwa/*.test.mjs`) |
+| `npm run store:validar` · `npm run pwa:validar` | validam o material das lojas e o manifest do PWA; na base falham por falta de `store/` e de manifest, o esperado ([visão geral](./visao-geral.md) → "Base e produto") |
 | `npm run check:arch` | estrutura de `src/`, gerados de `.agents/` em dia e [mapa de src](./mapa-src.md) igual ao disco |
 | `npm run env:check` | flags de ambiente proibidas em homologação/produção |
 | `npm run dist:check`, `npm run verify:dist <x>` | entrada de build sem código de dev; vestígio de dev no artefato |
@@ -380,7 +462,7 @@ Há duas esteiras:
 
 ```bash
 npm run docker:ci          # esteira emulada: todas as etapas, APK em builds/ci/
-npm run docker:ci:image    # só a imagem (a mesma do APK, android.Dockerfile)
+npm run docker:image:android   # só a imagem (a mesma do APK, android.Dockerfile)
 ```
 
 - **Esteira emulada** ([docker/ci/docker-compose.yml](../docker/ci/docker-compose.yml)): monta a árvore de trabalho
@@ -398,7 +480,7 @@ npm run docker:ci:image    # só a imagem (a mesma do APK, android.Dockerfile)
 
 - **Resultado:** resumo com status e duração de cada etapa; na falha, a etapa e o trecho final da saída (até 1.500
   caracteres, com as senhas do keystore mascaradas) e saída 1. A primeira execução baixa dependências e Gradle; os
-  volumes de cache (`mpb-ci-npm-cache`, `mpb-gradle-cache`) aceleram as seguintes.
+  volumes de cache compartilhados (`toolchain-npm-cache`, `toolchain-gradle-cache`) aceleram as seguintes.
 - **Modelos:** [.github/workflows/ci.yml.example](../.github/workflows/ci.yml.example) (push na `master` e PR;
   `[skip ci]` nativo) e [Jenkinsfile.example](../Jenkinsfile.example) (agente com Docker; `[skip ci]` conferido na
   primeira etapa). Para ativar, copiar sem o `.example`. Os dois rodam o compose da esteira emulada.

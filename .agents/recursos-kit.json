@@ -1,0 +1,31 @@
+{
+  "kit": { "versao": "1.0.0", "data": "2026-11-12", "modo": "reparo" },
+  "observacao": "Base reutilizável: não publica em loja nem é instalável pelo navegador. Lojas e PWA ficam preparados (docs, rules e scripts) para o produto ativar; ver docs/visao-geral.md → \"Base e produto\". Ao reaplicar o kit, manter essa leitura.",
+  "recursos": {
+    "lojas": {
+      "marcado": true,
+      "estado": "preparado para o produto",
+      "doc": "docs/publicacao-lojas.md",
+      "rule": ".agents/rules/lojas.md",
+      "scripts": [
+        "scripts/store/requisitos-lojas.mjs",
+        "scripts/store/montar-material.mjs",
+        "scripts/store/montar-material.test.mjs",
+        "scripts/store/validar-material.mjs",
+        "scripts/store/validar-material.test.mjs",
+        "scripts/store/rascunhar-novidades.mjs",
+        "scripts/store/rascunhar-novidades.test.mjs"
+      ]
+    },
+    "pwa": {
+      "marcado": true,
+      "estado": "preparado para o produto",
+      "doc": "docs/pwa-e-instalacao.md",
+      "rule": ".agents/rules/pwa.md",
+      "scripts": ["scripts/pwa/requisitos-pwa.mjs", "scripts/pwa/validar-pwa.mjs", "scripts/pwa/validar-pwa.test.mjs"]
+    }
+  },
+  "adaptacoes": [
+    "Scripts opcionais convertidos de CommonJS para ESM (.mjs): o lint do projeto proíbe require() (@typescript-eslint/no-require-imports)."
+  ]
+}
