@@ -246,6 +246,7 @@ src/    <-- Codigo fonte da aplicacao
 ├── hooks/    <-- Hooks React compartilhados
 │   ├── use-account-placement.ts    <-- Onde o perfil renderiza no web (header × menu) e se há menu na sidebar
 │   ├── use-analytics.ts    <-- Hook React compartilhado
+│   ├── use-autostart-setting.ts    <-- Iniciar com o sistema (app desktop) em Configuracoes
 │   ├── use-baixar-arquivo.ts    <-- Baixa um documento do backend e entrega ao aparelho (download ou compartilhar)
 │   ├── use-biometric-setting.ts    <-- Biometria da conta em Configuracoes e no menu
 │   ├── use-captcha-required.ts    <-- Decide se o login exige o captcha (Turnstile)
@@ -294,6 +295,7 @@ src/    <-- Codigo fonte da aplicacao
 │   │   ├── biometrics.ts    <-- Apoio do modulo lib/platform
 │   │   ├── camera.ts    <-- Apoio do modulo lib/platform
 │   │   ├── capacitor.ts    <-- Apoio do modulo lib/platform
+│   │   ├── desktop.ts    <-- App desktop (Tauri): deteccao, iniciar com o sistema, rotulos da bandeja
 │   │   ├── device-info.ts    <-- Tipo fisico do aparelho e deviceid enviado no login
 │   │   ├── files.ts    <-- Apoio do modulo lib/platform
 │   │   ├── index.ts    <-- Ponto de exportacao do modulo

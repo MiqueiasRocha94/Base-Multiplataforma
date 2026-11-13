@@ -5,6 +5,7 @@ alwaysApply: true
 ---
 
 <!-- GERADO por npm run agents:sync a partir de docs/ e .agents/rules/ — não edite. -->
+<!-- Agent Docs Kit 1.0.0 — reparo em 2026-11-12 -->
 
 Leia antes de qualquer tarefa: @docs/README.md (ordem inicial de leitura) e @docs/conduta-agentes.md (conduta
 obrigatória). As orientações deste projeto ficam só em `docs/`.

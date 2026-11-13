@@ -1,4 +1,8 @@
 {
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "40"
+  },
+  "autoCompactEnabled": true,
   "hooks": {
     "PostToolUse": [
       {

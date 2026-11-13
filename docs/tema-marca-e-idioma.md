@@ -151,7 +151,7 @@ Identidade em **duas camadas**:
   `BrandProfile`. Nenhuma tela ramifica por marca.
 - **Nova marca:** perfil em `src/config/brand.ts`, cores no `colorScheme` do
   `system-config.json`, assets em `public/brands/<id>/`, `BrandInfo` em
-  `config/brand-info.ts` e um compose por marca em `docker/production/<id>/`
+  `config/brand-info.ts`; o build de produção recebe a marca em `NEXT_PUBLIC_BRAND`
   ([ambiente e build](./ambiente-e-build.md) → "Build em Docker").
 
 ## Fonte: preset (família) + tamanho (escala)

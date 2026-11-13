@@ -61,15 +61,26 @@ src/
     actions/               catálogo de ações por entidade + RBAC de exibição
     auth/                  sessão, canal/DPoP, permissões e gate de acesso
     i18n/                  dicionários e settings
-    platform/              ★ wrappers de Capacitor (biometria, câmera, arquivos, notificações, storage)
+    platform/              ★ wrappers de Capacitor e do app desktop (biometria, câmera, arquivos, notificações, storage)
     system/                ★ resolveSystemConfig (resolver puro) + route-meta (RouteMeta)
     navigation.ts          árvore de navegação + regras de placement
     utils.ts               cn() e utilitários
   services/                módulo de serviços reais (acesso, entidades, brand, analytics; api/ = cliente da API)
   styles/tokens.css        módulo de estilos globais: CSS variables semânticas
   types/                   módulo de tipos globais puros
-scripts/                   pipeline de env e build (web/mobile/APK)
+scripts/                   pipeline de env e build (web/mobile/APK/desktop)
+  store/                   material das lojas: montar, validar, rascunhar novidades (publicacao-lojas.md)
+  pwa/                     validador do manifest e ícones do PWA (pwa-e-instalacao.md)
+store/                     material das lojas, criado pelo produto (não existe na base; build/ é gerado)
+src-tauri/                 casca do app desktop (Tauri 2, Rust): janela, bandeja, plugins
 ```
+
+`src-tauri/` fica **fora de `src/`** de propósito: é o fonte de outro programa
+(binário Rust, compilado pelo Cargo no container), não um módulo do app Next.
+Assim `src/` continua só com o que o Next importa, sob o lint, o `check:arch` e o
+[mapa de src](./mapa-src.md), e o nome segue a convenção do Tauri. O que o app
+Next usa do desktop mora em `src/lib/platform/desktop.ts`
+([plataforma nativa](./plataforma-nativa.md) → "Desktop (Tauri)").
 
 ## Módulos arquiteturais de `src`
 

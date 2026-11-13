@@ -13,8 +13,8 @@ pendências — **não** fica aqui: vive na área local dos agentes
 descrevem o que cada módulo deve entregar; a linha `Status` diz em que ponto do
 ciclo está.
 
-A base é reutilizável (Next.js 16 / React 19 + Capacitor 8 + TypeScript): o mesmo
-código entrega web (desktop) e mobile encapsulado, com a malha física da tela
+A base é reutilizável (Next.js 16 / React 19 + Capacitor 8 + Tauri 2 + TypeScript): o
+mesmo código entrega web, mobile encapsulado e app desktop, com a malha física da tela
 controlada em runtime pelo `SystemContext`.
 
 > Convenção: **código em inglês**, **documentação em pt-BR**. É uma base de
@@ -64,13 +64,16 @@ Antes de qualquer tarefa:
 | [Comunicação com a API](./comunicacao-api.md) | Raízes de API, clientes HTTP, erros, "front consome, backend decide", `dev-backend`. |
 | [Autenticação e permissões](./autenticacao-e-permissoes.md) | Sessão, fluxo de acesso, gate, canais/DPoP, permissões. |
 | [Integrações](./integracoes.md) | Turnstile, push, atestado do app, arquivos (PDF/planilha). |
-| [Plataforma nativa](./plataforma-nativa.md) | Wrappers de Capacitor e storage. |
+| [Plataforma nativa](./plataforma-nativa.md) | Wrappers de Capacitor, app desktop (Tauri) e storage. |
 | [Ferramentas de desenvolvimento](./ferramentas-dev.md) | Modo desenvolvedor, painel do sistema e como ficam fora do build. |
+| [Publicação nas lojas](./publicacao-lojas.md) | Preparado para o produto: Google Play e App Store, material `store/`, assinatura, validação. |
+| [PWA e instalação](./pwa-e-instalacao.md) | Preparado para o produto: manifest, service worker, cache, variável que liga e desliga. |
 
 **Produto, contratos e trabalho**
 
 | Doc | Assunto |
 | --- | --- |
+| [Domínio da base](./dominios/base-multiplataforma.md) | Atores, perfis, conceitos e regras do domínio de demonstração (o produto troca pelo seu). |
 | [Specs](./specs/README.md) | **O que** cada módulo entrega; [template](./specs/_template.md) para o produto criar as suas. |
 | [Conduta de agentes de IA](./conduta-agentes.md) | Fluxo com plano aprovado, autorizações, docs e commits, specs, handoffs front×back e instruções por ferramenta. |
 
@@ -100,7 +103,12 @@ Antes de qualquer tarefa:
 | RBAC, permissão, `requiredPermissions`, ações | [autenticação e permissões](./autenticacao-e-permissoes.md) | Permissões |
 | Turnstile, captcha, push, atestado, Play Integrity, PDF, `baixarArquivo` | [integrações](./integracoes.md) | Cloudflare Turnstile (captcha), Notificações push, Importação, exportação e relatórios |
 | Capacitor, câmera, arquivo, notificação, orientação, storage | [plataforma nativa](./plataforma-nativa.md) | Padrão, Storage |
+| desktop, Tauri, `src-tauri`, bandeja, iniciar com o sistema, Windows, Linux | [plataforma nativa](./plataforma-nativa.md) · [ambiente e build](./ambiente-e-build.md) | Desktop (Tauri) · Build desktop (Tauri) |
 | modo desenvolvedor, painel do sistema, dev tools, captcha desligado, `@dev-only` | [ferramentas de desenvolvimento](./ferramentas-dev.md) | Fora dos artefatos |
+| loja, Google Play, App Store, `store/`, AAB, `store:*`, fastlane | [publicação nas lojas](./publicacao-lojas.md) | Material das lojas, Publicar |
+| PWA, manifest, service worker, instalável, `pwa:validar` | [PWA e instalação](./pwa-e-instalacao.md) | Configuração, Habilitar e desabilitar |
+| base × produto, recurso preparado, reaplicar o kit, `recursos-kit.json` | [visão geral](./visao-geral.md) | Base e produto |
+| domínio, ator, perfil, conceito, regra de negócio | [domínio da base](./dominios/base-multiplataforma.md) | Perfis, Regras de negócio |
 | env, `NEXT_PUBLIC_*`, ambientes | [ambiente e build](./ambiente-e-build.md) | Ambientes |
 | build, APK, Docker, identidade do app, versão nativa, páginas do app | [ambiente e build](./ambiente-e-build.md) | Build mobile (Capacitor), Identidade do app por marca, Páginas publicadas no app, Build em Docker |
 | atualização remota, live update, OTA, pacote web, `APP_UPDATE_ENABLED`, `@app-update` | [ambiente e build](./ambiente-e-build.md) | Atualização remota do app |
@@ -109,6 +117,8 @@ Antes de qualquer tarefa:
 | release, versão, changelog, esteira, CI | [ambiente e build](./ambiente-e-build.md) | Release, Esteira (CI) |
 | desvio, fronteira, lint, `Dxx`, `eslint-disable` | [enforcement](./enforcement-arquitetura.md) | Exceção intencional |
 | plano, aprovação, dúvida, esclarecer | [conduta](./conduta-agentes.md) | Fluxo obrigatório |
+| discordar, análise crítica, opinião, revisão de proposta | [conduta](./conduta-agentes.md) | Análise crítica |
+| compactação, contexto, `ESTADO.md` em tarefa longa | [conduta](./conduta-agentes.md) | Instruções de agentes |
 | livre, proibido, dependência, APK, segredo, autorização | [conduta](./conduta-agentes.md) | Autorizações |
 | commit, PR, editar docs | [conduta](./conduta-agentes.md) | Documentação e commits |
 | spec de mudança, `.agents/specs` | [conduta](./conduta-agentes.md) | Especificação de mudança |

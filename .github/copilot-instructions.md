@@ -1,4 +1,5 @@
 <!-- GERADO por npm run agents:sync a partir de docs/ e .agents/rules/ — não edite. -->
+<!-- Agent Docs Kit 1.0.0 — reparo em 2026-11-12 -->
 
 > Fonte única das orientações deste projeto: [docs/README.md](../docs/README.md) (ordem inicial de leitura e
 > índice). A conduta abaixo é cópia gerada de [docs/conduta-agentes.md](../docs/conduta-agentes.md); não edite aqui.
@@ -19,19 +20,21 @@ Evidência: `package.json`, `.nvmrc`, `next.config.ts`. Se divergir, vale o arqu
 
 | Item | Valor |
 | --- | --- |
-| Projeto | Base multiplataforma (web + APK), reutilizável por produtos ([visão geral](../docs/./visao-geral.md)) |
+| Projeto | Base multiplataforma (web + APK + desktop Windows/Linux), reutilizável por produtos ([visão geral](../docs/./visao-geral.md)) |
 | Runtime | Node 22 (`.nvmrc`) · npm · TypeScript 5 |
-| Stack | Next.js 16.2 (App Router, Turbopack) · React 19.2 (React Compiler) · Tailwind 4 · Capacitor 8 · zod 4 · recharts 2 |
+| Stack | Next.js 16.2 (App Router, Turbopack) · React 19.2 (React Compiler) · Tailwind 4 · Capacitor 8 · Tauri 2 · zod 4 · recharts 2 |
 | Next.js 16 | Tem mudanças incompatíveis com versões anteriores: APIs, convenções e estrutura de arquivos podem diferir do que o agente conhece. Leia o guia relevante em `node_modules/next/dist/docs/` antes de usar uma API e respeite avisos de depreciação |
-| Saída | web: padrão/`standalone` (Docker) · mobile: `output: "export"` (por isso sem rota `[param]`) |
-| Comandos | `npm run dev` · `npm run typecheck` · `npm run lint` (ou `npx eslint <arquivos>`) · `npm test` (`tests/*.test.mjs`) · `npm run check:arch` · build em [ambiente e build](../docs/./ambiente-e-build.md) |
+| Saída | web: padrão/`standalone` (Docker) · mobile e desktop: `output: "export"` (por isso sem rota `[param]`) |
+| Comandos | `npm run dev` · `npm run typecheck` · `npm run lint` (ou `npx eslint <arquivos>`) · `npm test` (`tests/` + `scripts/{store,pwa}`) · `npm run check:arch` · build em [ambiente e build](../docs/./ambiente-e-build.md) |
 | Backend | API do produto (repositório separado); em dev, sem `NEXT_PUBLIC_ACESSO_API_URL` / `NEXT_PUBLIC_API_BASE_URL` usa `src/dev-backend`; fora de dev a API é obrigatória ([comunicação com a API](../docs/./comunicacao-api.md)) |
 | Contratos a preservar | `docs/specs/*` (contrato da API) · `RouteMeta` · `EntityContract` · chaves de `public/locales` · permissões em `src/lib/auth/permissoes` |
 | Instruções de agentes | `npm run agents:sync` (gera), `npm run agents:check` (confere; também roda no `check:arch`) |
+| Contexto do agente | Claude Code compacta automaticamente ao atingir no máximo 40% da janela de contexto ([Instruções de agentes](#instruções-de-agentes)) |
 | Pendências compartilhadas | issues do repositório GitHub `MiqueiasRocha94/Base-Multiplataforma` ([Pendências compartilhadas](#pendências-compartilhadas)) |
 | Commits | Conventional Commits em português com emoji (`feat: ✨ …`, `fix: 🐛 …`, `docs: 📝 …`); versão pela esteira do GitHub (semantic-release, fase beta `0.y.z`; [ambiente e build](../docs/./ambiente-e-build.md) → "Release") |
 
-**Não editar:** `.next/`, `out/`, `dist/`, `android/`, `ios/`, `builds/`, `node_modules/`, projetos externos usados
+**Não editar:** `.next/`, `out/`, `dist/`, `android/`, `ios/`, `builds/`, `node_modules/`, os gerados de
+`src-tauri/` (`target/`, `gen/`, `icons/`, `tauri.build.json`), projetos externos usados
 como referência (só consulta) e os arquivos gerados listados em
 [Instruções de agentes](#instruções-de-agentes).
 
@@ -73,6 +76,24 @@ Toda tarefa que altera o projeto (código, documentação, configuração, depen
 Pedido só de explicação, análise ou revisão, sem alteração, não precisa de plano. Dispensa de plano só vale quando o
 responsável a dá explicitamente, e não dispensa o esclarecimento de dúvidas. A aprovação do plano não substitui as
 autorizações específicas de [Autorizações](#autorizações), salvo quando as inclui explicitamente.
+
+### Análise crítica
+
+O agente não concorda por padrão. Vale para pedidos de análise, avaliação, revisão, opinião ou comparação (pela
+intenção, mesmo sem essas palavras) e também para **decisões do responsável embutidas num pedido de alteração**
+(solução, biblioteca, estrutura, regra, atalho):
+
+- aponta erros, riscos, premissas falsas, lacunas, contradição com `docs/` ou com o código e alternativas melhores,
+  com o fundamento de cada ponto (código, doc, comportamento verificado);
+- nunca concorda com o que está errado: nem com a proposta do responsável, nem com decisão anterior do próprio agente;
+  concordância vem com o motivo, não com elogio;
+- decisão questionável vai para o plano (**Impactos e riscos**) com a recomendação, **antes** de executar;
+- mantém a posição diante de insistência sem argumento novo; muda só com evidência ou motivo novo, e diz o que o fez
+  mudar;
+- separa o que foi verificado do que é opinião ou suposição e diz o que recomenda, sem listar opções que não seguiria.
+
+A decisão final é do responsável: ouvida a objeção, se ele mantém a escolha, o agente segue e registra a divergência
+na entrega. Discordar não autoriza alterar nada: mudança continua pelo fluxo esclarecer → plano → aprovação.
 
 ## Escopo
 
@@ -263,6 +284,8 @@ O checklist está no template de PR ([.github/pull_request_template.md](../docs/
 | Recurso de dev no build de homolog/produção | **Trava:** entrada de build sem o código de dev (`prepare-dist-source.mjs`) + `verify-dist.mjs` + `check:arch` (regiões `@dev-only`) + `validate-build-env.mjs`; regra de [Recurso de desenvolvimento só em desenvolvimento](#recurso-de-desenvolvimento-só-em-desenvolvimento) |
 | Commit, push, dependência nova sem pedir | **Trava (Claude Code):** pede confirmação; regra de [Autorizações](#autorizações) |
 | Editar sem plano aprovado | **Regra:** [Fluxo obrigatório](#fluxo-obrigatório) + revisão |
+| Concordar com decisão errada para agradar | **Regra:** [Análise crítica](#análise-crítica) |
+| Contexto longo diluindo as regras | **Trava (Claude Code):** compactação automática em 40% ([Instruções de agentes](#instruções-de-agentes)) |
 | Documentação desatualizada | **Trava:** `check:arch` falha se os arquivos gerados ou a árvore do [mapa de src](../docs/./mapa-src.md) divergirem |
 | Escopo, comportamento não pedido, especulação, complexidade, duplicação, mascarar causa, diff misturado, lixo | **Regra** ([Escopo](#escopo), [Regras de implementação](#regras-de-implementação)) + **revisão** ([Como revisar o resultado](#como-revisar-o-resultado)) |
 | Validar superficialmente, afirmar sem evidência | **Formato de [Entrega](#entrega)** obrigatório + revisão |
@@ -307,8 +330,9 @@ descrito nas [specs](../docs/./specs/README.md).
    rules apontam pelo nome da seção).
 3. Antes de criar um doc, procurar o responsável pelo assunto e consolidar nele. Sem duplicação: a regra vive em um
    lugar, os outros linkam.
-4. Domínio separado da mecânica: conceitos e papéis do produto em `docs/dominios/<produto>.md`; a mecânica no doc
-   do assunto técnico.
+4. Domínio separado da mecânica: conceitos e papéis do produto em `docs/dominios/<produto>.md` (na base, o domínio
+   de demonstração em [dominios/base-multiplataforma.md](../docs/./dominios/base-multiplataforma.md)); a mecânica no doc do
+   assunto técnico.
 5. Documentação vigente fica em `docs/`; proposta de mudança é spec em `.agents/specs/` ou em `docs/specs/`
    ([Especificação de mudança](#especificação-de-mudança)).
 6. Registro de trabalho não é doc: fica em `.agents/workspace/`. Arquivo versionado não linka essa pasta.
@@ -355,6 +379,22 @@ documentação oficial dela (rever ao trocar de versão):
 Para as ferramentas sem consulta automática das rules, a garantia vem do enforcement por máquina
 ([enforcement](../docs/./enforcement-arquitetura.md)): lint, `check:arch` e, no Claude Code, o hook e as permissões.
 
+**Agent Docs Kit:** a estrutura de `docs/`, `.agents/` e do gerador segue o Agent Docs Kit. Versão, modo da última
+aplicação e recursos escolhidos ficam em `.agents/recursos-kit.json`; o gerador escreve essa linha no cabeçalho dos
+arquivos gerados. Ao reaplicar o kit (ou criar um produto a partir da base), manter a leitura de
+[visão geral](../docs/./visao-geral.md) → "Base e produto": recursos preparados (lojas, PWA) continuam preparados na base.
+
+**Compactação de contexto (padrão):** no Claude Code, a compactação automática fica ligada (`autoCompactEnabled`) e
+dispara ao atingir **no máximo 40%** da janela de contexto, por `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=40` no `env` de
+`.claude/settings.json` (versionado). Motivo: com o contexto cheio a qualidade do trabalho cai (regras lidas no
+início perdem peso); compactar cedo mantém a conduta e o plano presentes. Vale para sessões novas; não aumentar o
+valor no projeto (ajuste pessoal, se preciso, fica em `.claude/settings.local.json`).
+
+Para a compactação não perder o fio: em tarefa longa, o agente mantém `.agents/workspace/ESTADO.md` (objetivo, plano
+aprovado, feito, próximo passo, decisões) e o atualiza ao fechar cada etapa; ao trocar de assunto, prefere sessão
+nova a carregar o contexto anterior. Nas outras ferramentas, o mesmo vale pelo comando de compactação ou nova sessão
+delas.
+
 Voltar ao [índice](../docs/./README.md).
 
 ## Encaminhamento por caminho
@@ -367,6 +407,8 @@ Ao mexer nestes caminhos, leia a rule correspondente.
 | [arquitetura-src](../.agents/rules/arquitetura-src.md) | Fronteiras dos módulos arquiteturais de src/ (o que cada pasta pode importar) | `src/**` |
 | [core-types](../.agents/rules/core-types.md) | core (engine pura) e types (tipos puros) — camadas de baixo, sem React nem runtime | `src/core/**`, `src/types/**` |
 | [docs](../.agents/rules/docs.md) | Documentação e orientação de agentes (docs/ e .agents/) | `docs/**`, `.agents/**` |
+| [lojas](../.agents/rules/lojas.md) | Publicação na Google Play e na App Store: material store/, esteira e requisitos das lojas | `store/**`, `scripts/store/**`, `fastlane/**`, `eas.json` |
+| [pwa](../.agents/rules/pwa.md) | App web instalável (PWA): manifest, ícones, service worker e instalação | `**/manifest.webmanifest`, `**/manifest.json`, `src/app/manifest.*`, `**/sw.*`, `scripts/pwa/**` |
 | [rotas-app](../.agents/rules/rotas-app.md) | Rotas do App Router (src/app) — page.tsx fino, sem _components, sem [param] | `src/app/**` |
 | [servicos-api](../.agents/rules/servicos-api.md) | Chamadas à API, clientes HTTP e dev-backend | `src/services/**`, `src/lib/http.ts`, `src/lib/http-errors.ts`, `src/dev-backend/**` |
 | [specs](../.agents/rules/specs.md) | Feature/tela nova parte da spec do módulo em docs/specs | `src/app/**`, `src/components/**`, `src/services/**` |
